@@ -78,6 +78,17 @@ README.md          setup instructions per module, and instructions for
 6. Be honest in all reported numbers. Any performance comparison, energy savings percentage, or latency estimate must be clearly labeled as either measured (from actual simulation output) or estimated (based on published specifications, since no physical hardware exists yet in this phase). Do not present an estimate as a measurement, this distinction matters for the project's academic integrity and for what can be defended honestly in front of a panel.
 7. When in doubt about scope, do less rather than more. It is better to flag "this decision belongs to a different module, here is what I assumed for now" than to quietly make a decision that should have been a team discussion.
 
+## Cross Platform Compatibility, Module A and C on Windows, Module B on Mac
+
+This team is working across two operating systems, so every agent must follow these rules to avoid environment mismatches at integration time.
+
+1. Never hardcode file paths with OS specific separators. Always use Python's `pathlib.Path` for any file or folder path, never a raw string with backslashes or forward slashes typed manually.
+2. Use a virtual environment with a single pinned `requirements.txt` shared across the whole repo. In week 1, each collaborator must run the exact same install command in a clean virtual environment and confirm it completes without errors on their machine, before building anything on top of it. If an install fails on one OS, flag it to the team immediately rather than working around it locally.
+3. Add a `.gitattributes` file at the repo root that normalizes line endings (LF) across the project, to avoid noisy diffs and broken scripts caused by Windows CRLF versus Mac LF differences.
+4. Module B, training on Mac, will likely use CPU or Apple's MPS backend rather than CUDA. This is expected and fine, the policy network in this project is small enough that GPU acceleration is not required for reasonable training times. Do not add CUDA specific code that would fail to run on Mac.
+5. The actual handoff artifact between Module B and the other two modules is the ONNX exported model file, which is fully platform independent. Module C on Windows will load this file with no compatibility concerns, so cross platform work is really only about local development environment consistency, not the final integration artifact.
+6. Any shell scripts (for setup, running training, or evaluation) should be written in Python rather than OS specific shell scripts (`.sh` or `.bat`), so the same script runs unmodified on both Windows and Mac.
+
 ## Integration Checkpoints
 
 There are two points where modules must sync with each other's real output rather than mocks: once Module A's environment is stable enough for Module B to train against for real, and once Module B's trained model is exported and ready for Module C to evaluate for real. Both transitions should be explicitly confirmed between collaborators, not assumed to have silently happened.

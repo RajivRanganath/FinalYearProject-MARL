@@ -1,0 +1,14 @@
+# Core Dependencies
+numpy
+pandas
+
+# Multi-Agent RL & Environments
+pettingzoo
+supersuit
+# EPyMARL / PyMARL2 dependencies usually require specific PyTorch versions.
+# For Mac compatibility, we will just use the standard torch pip package which includes MPS support.
+torch
+
+# Model Export & Inference
+onnx
+onnxruntime

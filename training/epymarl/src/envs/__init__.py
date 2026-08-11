@@ -37,6 +37,16 @@ REGISTRY = {}
 REGISTRY["smaclite"] = smaclite_fn
 REGISTRY["gymma"] = gymma_fn
 
+def iot_fn(**kwargs) -> MultiAgentEnv:
+    import sys
+    import os
+    wrapper_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+    if wrapper_path not in sys.path:
+        sys.path.append(wrapper_path)
+    from env_wrapper import IoTSensorEnvWrapper
+    return IoTSensorEnvWrapper(**kwargs)
+
+REGISTRY["iot"] = iot_fn
 
 # registering both smac and smacv2 causes a pysc2 error
 # --> dynamically register the needed env

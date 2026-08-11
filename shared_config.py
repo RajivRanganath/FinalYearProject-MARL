@@ -61,3 +61,13 @@ SCENARIOS = {
         "entropy_volatility": "high"
     }
 }
+
+# -----------------------------------------------------------------------------
+# Training and Execution Parameters
+# -----------------------------------------------------------------------------
+# Explicitly default to CPU for consistency across OS and ease of deployment.
+DEVICE = "cpu"
+
+# Seed for reproducibility in all environments and splits.
+SEED = 42
+

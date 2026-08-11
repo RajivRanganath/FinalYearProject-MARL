@@ -1,6 +1,7 @@
 env: "iot"
 
-env_args: {}
+env_args:
+  map_name: "mock"
 
 test_greedy: True
 test_nepisode: 10

@@ -3,7 +3,6 @@ import sys
 
 from .multiagentenv import MultiAgentEnv
 from .gymma import GymmaWrapper
-from .smaclite_wrapper import SMACliteWrapper
 
 
 if sys.platform == "linux":
@@ -34,7 +33,6 @@ def gymma_fn(**kwargs) -> MultiAgentEnv:
 
 
 REGISTRY = {}
-REGISTRY["smaclite"] = smaclite_fn
 REGISTRY["gymma"] = gymma_fn
 
 def iot_fn(**kwargs) -> MultiAgentEnv:

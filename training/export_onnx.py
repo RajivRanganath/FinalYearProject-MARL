@@ -1,25 +1,67 @@
 import torch
-import os
 import sys
+import os
 
-def export_to_onnx(checkpoint_path, output_path):
+# Ensure epymarl source is in path
+sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "epymarl", "src"))
+from modules.agents.rnn_agent import RNNAgent
+from types import SimpleNamespace
+
+def export_to_onnx(checkpoint_dir, output_path):
     """
-    Exports the trained individual agent policy (not the mixing network) to ONNX format.
+    Exports the trained individual agent policy (the RNN network) to ONNX format.
     Module C relies on this file to evaluate hardware performance.
     """
-    # Note: EPyMARL's RNNAgent takes inputs: (obs, hidden_state)
-    # The actual architecture requires initializing the correct agent type.
-    # This is a placeholder demonstrating the ONNX export script structure.
-    # Once training produces a checkpoint, this will be updated to load the specific
-    # PyTorch module and trace it using torch.onnx.export.
+    print(f"Loading model from {checkpoint_dir}...")
     
-    print(f"Exporting model from {checkpoint_path} to {output_path}...")
-    print("Ensure the checkpoint exists and the agent architecture matches the training run.")
-    print("Module C expects the ONNX file to accept input of shape [1, 3] + hidden state (if RNN).")
+    # In EPyMARL, models are saved in the checkpoint_dir (e.g., results/models/vdn_.../1/)
+    # The agent network is typically named agent.th
+    agent_path = os.path.join(checkpoint_dir, "agent.th")
+    
+    if not os.path.exists(agent_path):
+        print(f"Error: Could not find agent.th in {checkpoint_dir}")
+        sys.exit(1)
+        
+    # We construct the args namespace to initialize RNNAgent
+    # Default EPyMARL settings for our env:
+    args = SimpleNamespace(
+        rnn_hidden_dim=64, # Default hidden_dim in EPyMARL
+        n_actions=2,       # Sleep or Sample
+    )
+    
+    # EPyMARL by default adds agent_id (one-hot) to the observation if obs_agent_id=True.
+    # For 3 agents, one-hot id is size 3. Mock env obs is size 3. Total input = 3 + 3 = 6.
+    input_shape = 6
+    
+    agent = RNNAgent(input_shape, args)
+    
+    # Load weights
+    agent.load_state_dict(torch.load(agent_path, map_location=lambda storage, loc: storage))
+    agent.eval()
+    
+    # Dummy inputs for tracing: [batch_size, input_shape] and [batch_size, hidden_dim]
+    dummy_obs = torch.randn(1, input_shape)
+    dummy_hidden = torch.randn(1, args.rnn_hidden_dim)
+    
+    print(f"Exporting to {output_path}...")
+    torch.onnx.export(
+        agent,
+        (dummy_obs, dummy_hidden),
+        output_path,
+        export_params=True,
+        opset_version=11,
+        do_constant_folding=True,
+        input_names=['obs', 'hidden_state_in'],
+        output_names=['q_values', 'hidden_state_out'],
+        dynamic_axes={'obs': {0: 'batch_size'}, 'hidden_state_in': {0: 'batch_size'}}
+    )
+    
+    print(f"Successfully exported ONNX model to {output_path}")
+    print("Module C can now use this file for hardware profiling.")
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
-        print("Usage: python export_onnx.py <checkpoint_path> <output_onnx_path>")
+        print("Usage: python export_onnx.py <checkpoint_dir_containing_agent.th> <output_onnx_path>")
         sys.exit(1)
     
     export_to_onnx(sys.argv[1], sys.argv[2])

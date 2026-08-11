@@ -16,3 +16,4 @@ This document outlines the architecture of the trained MARL policy network (indi
 - A typical architecture of 2 hidden layers of size 64 will result in approximately `(3*64) + 64 + (64*64) + 64 + (64*2) + 2 = ~4.5k` parameters, well within our budget.
 
 *Note: Once the final model is trained and exported via `export_onnx.py`, this document should be updated with the exact parameter count and layer shapes.*
+modul

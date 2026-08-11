@@ -33,10 +33,12 @@ class IoTSensorEnvWrapper(MultiAgentEnv):
         # Centralized reward (sum of individual rewards) for cooperative MARL
         team_reward = sum(reward_dict.values())
         
-        terminated = all(terminations_dict.values()) or any(truncations_dict.values())
+        terminated = all(terminations_dict.values())
+        truncated = any(truncations_dict.values())
         info = {"episode_limit": self.episode_limit}
         
-        return team_reward, terminated, info
+        # EPyMARL's episode_runner expects 5 values: _, reward, terminated, truncated, env_info
+        return None, team_reward, terminated, truncated, info
 
     def get_obs(self):
         return [self._obs[f"agent_{i}"] for i in range(self.n_agents)]

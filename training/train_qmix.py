@@ -14,9 +14,7 @@ def train_qmix():
     cmd = [
         sys.executable, main_script,
         "--config=qmix",
-        "--env-config=iot",
-        f"device={shared_config.DEVICE}",
-        f"seed={shared_config.SEED}"
+        "--env-config=iot"
     ]
     print(f"Running QMIX with command: {' '.join(cmd)}")
     subprocess.run(cmd)

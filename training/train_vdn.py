@@ -14,9 +14,7 @@ def train_vdn():
     cmd = [
         sys.executable, main_script,
         "--config=vdn",
-        "--env-config=iot",
-        f"device={shared_config.DEVICE}",
-        f"seed={shared_config.SEED}"
+        "--env-config=iot"
     ]
     print(f"Running VDN with command: {' '.join(cmd)}")
     subprocess.run(cmd)

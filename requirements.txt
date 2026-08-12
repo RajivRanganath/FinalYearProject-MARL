@@ -3,10 +3,11 @@ numpy
 pandas
 
 # Multi-Agent RL & Environments
+gymnasium>=0.28.0
 pettingzoo==1.24.3
 supersuit
-# EPyMARL / PyMARL2 dependencies usually require specific PyTorch versions.
-# For Mac compatibility, we will just use the standard torch pip package which includes MPS support.
+
+# EPyMARL / PyMARL2 dependencies (standard PyTorch for cross-platform support)
 torch
 
 # Model Export & Inference

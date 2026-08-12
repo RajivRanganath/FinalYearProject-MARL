@@ -1,0 +1,98 @@
+[INFO 22:57:58] pymarl Running command 'my_main'
+[INFO 22:57:58] pymarl Started run with ID "1"
+[DEBUG 22:57:58] pymarl Starting Heartbeat
+[DEBUG 22:57:58] my_main Started
+[WARNING 22:57:58] my_main CUDA flag use_cuda was switched OFF automatically because no CUDA devices are available!
+[INFO 22:57:58] my_main Experiment Parameters:
+[INFO 22:57:58] my_main 
+
+{   'action_selector': 'epsilon_greedy',
+    'add_value_last_step': True,
+    'agent': 'rnn',
+    'agent_output_type': 'q',
+    'batch_size': 32,
+    'batch_size_run': 1,
+    'buffer_cpu_only': True,
+    'buffer_size': 5000,
+    'checkpoint_path': '',
+    'common_reward': True,
+    'double_q': True,
+    'env': 'iot',
+    'env_args': {   'map_name': 'mock',
+                    'seed': 577242374},
+    'epsilon_anneal_time': 50000,
+    'epsilon_finish': 0.05,
+    'epsilon_start': 1.0,
+    'evaluate': False,
+    'evaluation_epsilon': 0.0,
+    'gamma': 0.99,
+    'grad_norm_clip': 10,
+    'hidden_dim': 64,
+    'hypergroup': None,
+    'hypernet_embed': 64,
+    'hypernet_layers': 2,
+    'label': 'default_label',
+    'learner': 'q_learner',
+    'learner_log_interval': 1000,
+    'load_step': 0,
+    'local_results_path': 'results',
+    'log_interval': 1000,
+    'lr': 0.0005,
+    'mac': 'basic_mac',
+    'mixer': 'qmix',
+    'mixing_embed_dim': 32,
+    'name': 'qmix',
+    'obs_agent_id': True,
+    'obs_individual_obs': False,
+    'obs_last_action': False,
+    'optim_alpha': 0.99,
+    'optim_eps': 1e-05,
+    'render': False,
+    'repeat_id': 1,
+    'reward_scalarisation': 'sum',
+    'runner': 'episode',
+    'runner_log_interval': 1000,
+    'save_model': True,
+    'save_model_interval': 1000,
+    'save_replay': False,
+    'seed': 577242374,
+    'standardise_returns': False,
+    'standardise_rewards': True,
+    't_max': 1500,
+    'target_update_interval_or_tau': 200,
+    'test_greedy': True,
+    'test_interval': 1000,
+    'test_nepisode': 10,
+    'use_cuda': False,
+    'use_rnn': False,
+    'use_tensorboard': False,
+    'use_wandb': False,
+    'wandb_mode': 'offline',
+    'wandb_project': None,
+    'wandb_save_model': False,
+    'wandb_team': None}
+
+[INFO 22:57:59] my_main Beginning training for 1500 timesteps
+/Users/rajiv/Desktop/FinalYearProject-MARL/training/epymarl/src/components/episode_buffer.py:93: UserWarning: Using a non-tuple sequence for multidimensional indexing is deprecated and will be changed in pytorch 2.9; use x[tuple(seq)] instead of x[seq]. In pytorch 2.9 this will be interpreted as tensor index, x[torch.tensor(seq)], which will result either in an error or a different result (Triggered internally at /Users/runner/work/pytorch/pytorch/torch/csrc/autograd/python_variable_indexing.cpp:355.)
+  target["filled"][slices] = 1
+/Users/rajiv/Desktop/FinalYearProject-MARL/training/epymarl/src/components/episode_buffer.py:105: UserWarning: Using a non-tuple sequence for multidimensional indexing is deprecated and will be changed in pytorch 2.9; use x[tuple(seq)] instead of x[seq]. In pytorch 2.9 this will be interpreted as tensor index, x[torch.tensor(seq)], which will result either in an error or a different result (Triggered internally at /Users/runner/work/pytorch/pytorch/torch/csrc/autograd/python_variable_indexing.cpp:355.)
+  self._check_safe_view(v, target[k][_slices])
+/Users/rajiv/Desktop/FinalYearProject-MARL/training/epymarl/src/components/episode_buffer.py:106: UserWarning: Using a non-tuple sequence for multidimensional indexing is deprecated and will be changed in pytorch 2.9; use x[tuple(seq)] instead of x[seq]. In pytorch 2.9 this will be interpreted as tensor index, x[torch.tensor(seq)], which will result either in an error or a different result (Triggered internally at /Users/runner/work/pytorch/pytorch/torch/csrc/autograd/python_variable_indexing.cpp:355.)
+  target[k][_slices] = v.view_as(target[k][_slices])
+/Users/rajiv/Desktop/FinalYearProject-MARL/training/epymarl/src/components/episode_buffer.py:110: UserWarning: Using a non-tuple sequence for multidimensional indexing is deprecated and will be changed in pytorch 2.9; use x[tuple(seq)] instead of x[seq]. In pytorch 2.9 this will be interpreted as tensor index, x[torch.tensor(seq)], which will result either in an error or a different result (Triggered internally at /Users/runner/work/pytorch/pytorch/torch/csrc/autograd/python_variable_indexing.cpp:355.)
+  v = target[k][_slices]
+/Users/rajiv/Desktop/FinalYearProject-MARL/training/epymarl/src/components/episode_buffer.py:113: UserWarning: Using a non-tuple sequence for multidimensional indexing is deprecated and will be changed in pytorch 2.9; use x[tuple(seq)] instead of x[seq]. In pytorch 2.9 this will be interpreted as tensor index, x[torch.tensor(seq)], which will result either in an error or a different result (Triggered internally at /Users/runner/work/pytorch/pytorch/torch/csrc/autograd/python_variable_indexing.cpp:355.)
+  target[new_k][_slices] = v.view_as(target[new_k][_slices])
+[INFO 22:57:59] my_main t_env: 288 / 1500
+[INFO 22:57:59] my_main Estimated time left: 0 seconds. Time passed: 0 seconds
+[INFO 22:58:00] my_main Saving models to results/models/qmix_seed577242374_mock_2026-08-12 22:57:58.313366/288
+[INFO 22:58:00] my_main Recent Stats | t_env:       1152 | Episode:        4
+ep_length_mean:          288.0000	episode_limit_mean:      288.0000	epsilon:                   1.0000	return_mean:             -107.9000
+return_std:                0.0000	test_ep_length_mean:     288.0000	test_episode_limit_mean: 288.0000	test_return_mean:        -225.5500
+test_return_std:           0.0000	
+[INFO 22:58:01] my_main t_env: 1440 / 1500
+[INFO 22:58:01] my_main Estimated time left: 0 seconds. Time passed: 1 seconds
+[INFO 22:58:02] my_main Saving models to results/models/qmix_seed577242374_mock_2026-08-12 22:57:58.313366/1440
+[INFO 22:58:02] my_main Finished Training
+[DEBUG 22:58:03] my_main Finished after 0:00:05.
+[INFO 22:58:03] pymarl Completed after 0:00:05

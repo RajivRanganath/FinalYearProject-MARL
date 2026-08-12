@@ -26,7 +26,7 @@ if str(ROOT_DIR) not in sys.path:
     sys.path.append(str(ROOT_DIR))
 
 import shared_config
-from single_agent_env import SingleAgentSensorEnv
+from environment.single_agent_env import SingleAgentSensorEnv
 
 class MultiAgentSensorEnv:
     """

@@ -1,0 +1,112 @@
+{
+  "ep_length_mean": [
+    288.0,
+    288.0
+  ],
+  "ep_length_mean_T": [
+    288,
+    1440
+  ],
+  "episode": [
+    4
+  ],
+  "episode_T": [
+    1152
+  ],
+  "episode_limit_mean": [
+    288.0,
+    288.0
+  ],
+  "episode_limit_mean_T": [
+    288,
+    1440
+  ],
+  "epsilon": [
+    1.0,
+    0.978112
+  ],
+  "epsilon_T": [
+    288,
+    1440
+  ],
+  "return_mean": [
+    {
+      "dtype": "float64",
+      "py/object": "numpy.float64",
+      "value": -107.89999999999995
+    },
+    {
+      "dtype": "float64",
+      "py/object": "numpy.float64",
+      "value": -101.18749999999994
+    }
+  ],
+  "return_mean_T": [
+    288,
+    1440
+  ],
+  "return_std": [
+    {
+      "dtype": "float64",
+      "py/object": "numpy.float64",
+      "value": 0.0
+    },
+    {
+      "dtype": "float64",
+      "py/object": "numpy.float64",
+      "value": 6.8398076544593245
+    }
+  ],
+  "return_std_T": [
+    288,
+    1440
+  ],
+  "test_ep_length_mean": [
+    288.0,
+    288.0
+  ],
+  "test_ep_length_mean_T": [
+    288,
+    1440
+  ],
+  "test_episode_limit_mean": [
+    288.0,
+    288.0
+  ],
+  "test_episode_limit_mean_T": [
+    288,
+    1440
+  ],
+  "test_return_mean": [
+    {
+      "dtype": "float64",
+      "py/object": "numpy.float64",
+      "value": -225.5500000000008
+    },
+    {
+      "dtype": "float64",
+      "py/object": "numpy.float64",
+      "value": -225.5500000000008
+    }
+  ],
+  "test_return_mean_T": [
+    288,
+    1440
+  ],
+  "test_return_std": [
+    {
+      "dtype": "float64",
+      "py/object": "numpy.float64",
+      "value": 0.0
+    },
+    {
+      "dtype": "float64",
+      "py/object": "numpy.float64",
+      "value": 0.0
+    }
+  ],
+  "test_return_std_T": [
+    288,
+    1440
+  ]
+}

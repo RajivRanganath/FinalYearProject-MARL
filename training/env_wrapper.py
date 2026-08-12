@@ -7,13 +7,15 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "epymarl", "src"))
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from mock_env import MockIoTSensorEnv
+from environment.pettingzoo_env import IoTSensorEnv
 from envs.multiagentenv import MultiAgentEnv
 import shared_config
 
 class IoTSensorEnvWrapper(MultiAgentEnv):
     def __init__(self, **kwargs):
-        self.env = MockIoTSensorEnv()
+        # We pass scenario from kwargs or default to stable
+        scenario = kwargs.get("scenario", "stable")
+        self.env = IoTSensorEnv(scenario=scenario)
         self.n_agents = shared_config.NUM_AGENTS
         self.episode_limit = shared_config.EPISODE_LENGTH_TIMESTEPS
         self.n_actions = shared_config.NUM_ACTIONS

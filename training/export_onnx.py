@@ -25,13 +25,15 @@ def export_to_onnx(checkpoint_dir, output_path):
     # We construct the args namespace to initialize RNNAgent
     # Default EPyMARL settings for our env:
     args = SimpleNamespace(
-        rnn_hidden_dim=64, # Default hidden_dim in EPyMARL
+        hidden_dim=64, # Default hidden_dim in EPyMARL
+        rnn_hidden_dim=64,
         n_actions=2,       # Sleep or Sample
+        use_rnn=False,     # Based on EPyMARL defaults for MLP
     )
     
     # EPyMARL by default adds agent_id (one-hot) to the observation if obs_agent_id=True.
-    # For 3 agents, one-hot id is size 3. Mock env obs is size 3. Total input = 3 + 3 = 6.
-    input_shape = 6
+    # For 4 agents, one-hot id is size 4. Mock env obs is size 3. Total input = 3 + 4 = 7.
+    input_shape = 7
     
     agent = RNNAgent(input_shape, args)
     

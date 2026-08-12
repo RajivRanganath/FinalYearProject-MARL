@@ -25,7 +25,7 @@ if str(ROOT_DIR) not in sys.path:
     sys.path.append(str(ROOT_DIR))
 
 import shared_config
-from multi_agent_env import MultiAgentSensorEnv
+from environment.multi_agent_env import MultiAgentSensorEnv
 
 class IoTSensorEnv(ParallelEnv):
     """

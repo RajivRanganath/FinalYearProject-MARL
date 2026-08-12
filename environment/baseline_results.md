@@ -25,27 +25,29 @@ This document provides baseline benchmarks for **Module B (MARL Training)** and 
 
 | Policy | Team Reward | Avg Battery | Rejections | Missed Events | Overlap Steps | Energy Util Rate |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| `qmix_trained` | **17.82** | 0.9262 | 0 | 46 | 0 | 0.0% |
+| `fixed_interval` | **-26.78** | 0.8244 | 0 | 42 | 24 | 8.3% |
+| `rule_based` | **-238.70** | 0.4053 | 0 | 26 | 146 | 48.9% |
 | `random` | **-101.90** | 0.4563 | 183 | 25 | 128 | 34.1% |
-| `fixed_interval` | **-15.70** | 0.8304 | 0 | 34 | 24 | 8.3% |
-| `rule_based` | **-234.85** | 0.4047 | 0 | 21 | 147 | 49.0% |
 
 ### Volatile Scenario (High Volatility, Stochastic Weather & Spikes)
 
 | Policy | Team Reward | Avg Battery | Rejections | Missed Events | Overlap Steps | Energy Util Rate |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| `qmix_trained` | **-21.11** | 0.9275 | 0 | 92 | 0 | 0.0% |
+| `fixed_interval` | **-60.38** | 0.8282 | 0 | 86 | 24 | 8.3% |
+| `rule_based` | **-231.60** | 0.4124 | 0 | 47 | 150 | 49.8% |
 | `random` | **-102.70** | 0.4712 | 184 | 52 | 142 | 35.6% |
-| `fixed_interval` | **-54.80** | 0.8340 | 0 | 80 | 24 | 8.3% |
-| `rule_based` | **-216.90** | 0.4109 | 0 | 39 | 154 | 49.6% |
 
 ---
 
 ## 3. Plain-English Analysis & Policy Interpretation
 
 ### Stable Scenario Analysis
-In the stable low-volatility scenario, the **Fixed-Interval Policy ($N=12$)** achieved the best overall team reward (-15.70) and zero energy rejections. Because it samples conservatively once per hour (8.3% energy utilization), it preserves a high average battery level (83.0%) while suffering minimal co-sampling overlap (24 steps). The **Rule-Based Policy** performed worst overall (-234.85 team reward) because sampling aggressively whenever battery is above 20% causes high energy utilization (49.0%) on boring low-entropy data, incurring severe wasted energy penalties and heavy overlapping samples (147 steps). The **Random Policy** fell in between (-101.90), suffering 183 energy rejections because it randomly requests samples when battery is depleted.
+In the stable low-volatility scenario, the **Trained QMIX Policy** achieved the highest overall team reward (17.82), significantly outperforming the static baselines. However, this high reward was achieved by learning a degenerate "always sleep" policy (0.0% energy utilization, 0 overlap steps). Because the environment penalizes redundant low-entropy sampling heavily, the network learned that conserving battery and collecting the small +0.05 drip reward for resting is mathematically superior to paying the energy cost to sample the sparse high-entropy events. The **Fixed-Interval Policy ($N=12$)** achieved the next best reward (-26.78) by sampling conservatively. The **Rule-Based Policy** performed worst overall (-238.70 team reward) because sampling aggressively whenever battery is above 20% causes high energy utilization (48.9%) on boring low-entropy data.
 
 ### Volatile Scenario Analysis
-In the volatile high-spikes scenario, the **Fixed-Interval Policy** again performed best relative to unlearned baselines (-54.80 team reward) due to its disciplined energy conservation, though its missed event count increased from 34 to 80 due to higher event frequency. The **Rule-Based Policy** achieved the lowest missed event count (39 missed events vs 52 for random and 80 for fixed-interval) by sampling constantly whenever energy was available, but paid a massive penalty in wasted energy and redundant co-sampling (154 overlap steps), yielding the worst team reward (-216.90). The **Random Policy** performed poorly (-102.70) due to 184 energy causality rejections.
+In the volatile high-spikes scenario, the **Trained QMIX Policy** again secured the best team reward (-21.11) by maintaining the conservative always-sleep strategy. The **Fixed-Interval Policy** performed second best (-60.38 team reward). The **Rule-Based Policy** achieved the lowest missed event count (47 missed events) by sampling constantly whenever energy was available, but paid a massive penalty in wasted energy and redundant co-sampling (150 overlap steps), yielding the worst team reward (-231.60).
 
 ### Conclusion for MARL Training (Module B Target)
-Static heuristics present a clear failure tradeoff: Rule-based policies minimize missed events but drain batteries and waste energy during boring periods, while fixed-interval policies conserve energy but miss sparse events. The MARL policy trained in Module B must learn to selectively sample only when `data_entropy` spikes while using `neighbor_sampling_rate` to avoid overlapping transmissions, outperforming both baselines.
+The final trained MARL policies (QMIX) demonstrated a classic reinforcement learning phenomenon: finding a mathematical loophole in the reward function. By always sleeping, QMIX minimized energy waste and overlap penalties perfectly, achieving the highest `Team Reward` across all scenarios despite missing the sparse high-entropy events. This highlights a critical finding: to incentivize active selective sampling in deployment, the positive reward for capturing high-entropy events (+1.0) must heavily outweigh the constant positive drip for resting (+0.05) over long time horizons.

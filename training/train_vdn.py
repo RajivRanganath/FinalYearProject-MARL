@@ -14,7 +14,14 @@ def train_vdn():
     cmd = [
         sys.executable, main_script,
         "--config=vdn",
-        "--env-config=iot"
+        "--env-config=iot",
+        "with",
+        "save_model=True",
+        "save_model_interval=25000",
+        "buffer_size=5000",
+        "batch_size=16",
+        "epsilon_anneal_time=25000",
+        "epsilon_finish=0.10"
     ]
     print(f"Running VDN with command: {' '.join(cmd)}")
     subprocess.run(cmd)

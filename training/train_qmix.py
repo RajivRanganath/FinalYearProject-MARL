@@ -17,8 +17,8 @@ def train_qmix():
         "--env-config=iot",
         "with",
         "save_model=True",
-        "save_model_interval=1000",
-        "t_max=1500"
+        "save_model_interval=10000",
+        "t_max=30000"
     ]
     print(f"Running QMIX with command: {' '.join(cmd)}")
     subprocess.run(cmd)

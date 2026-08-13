@@ -3,8 +3,8 @@
 # use epsilon greedy action selector
 action_selector: "epsilon_greedy"
 epsilon_start: 1.0
-epsilon_finish: 0.10
-epsilon_anneal_time: 25000
+epsilon_finish: 0.05
+epsilon_anneal_time: 100000
 evaluation_epsilon: 0.0
 
 runner: "episode"
@@ -24,6 +24,7 @@ obs_individual_obs: False
 # use the Q_Learner to train
 standardise_returns: False
 standardise_rewards: False
+gamma: 0.99
 
 agent_output_type: "q"
 learner: "q_learner"

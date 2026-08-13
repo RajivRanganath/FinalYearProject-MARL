@@ -10,19 +10,24 @@ main_script = os.path.join(epymarl_dir, "main.py")
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import shared_config
 
-def train_qmix():
+def train_marl():
     cmd = [
         sys.executable, main_script,
-        "--config=qmix",
+        "--config=iql",
         "--env-config=iot",
         "with",
+        "t_max=1000000",
+        "lr=0.001",
+        "epsilon_anneal_time=100000",
+        "common_reward=False",
+        "reward_scalarisation=None",
+        "standardise_rewards=False",
+        "use_rnn=False",
         "save_model=True",
-        "save_model_interval=25000",
-        "gamma=0.95",
-        "standardise_rewards=False"
+        "save_model_interval=200000"
     ]
-    print(f"Running QMIX with command: {' '.join(cmd)}")
+    print(f"Running MARL with command: {' '.join(cmd)}")
     subprocess.run(cmd)
 
 if __name__ == "__main__":
-    train_qmix()
+    train_marl()

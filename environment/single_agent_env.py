@@ -184,12 +184,14 @@ class SingleAgentSensorEnv:
         # 2. Hard Energy Causality Constraint Check
         sample_rejected = False
         action_executed = action
+        rejection_penalty = 0.0
 
         if action == shared_config.ACTION_SAMPLE:
             if self.battery < self.sample_energy_cost:
                 # Reject sample: treat as Sleep (no-op), do NOT let battery drop below 0
                 sample_rejected = True
                 action_executed = shared_config.ACTION_SLEEP
+                rejection_penalty = -0.1
             else:
                 # Execute sample & deduct energy
                 self.battery -= self.sample_energy_cost
@@ -220,6 +222,8 @@ class SingleAgentSensorEnv:
         obs = np.array([self.battery, entropy_val], dtype=np.float32)
         terminated = (self.timestep >= self.episode_length)
         truncated = False
+
+        reward += rejection_penalty
 
         info = {
             "timestep": self.timestep,

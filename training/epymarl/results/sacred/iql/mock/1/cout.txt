@@ -1,0 +1,514 @@
+[INFO 16:32:41] pymarl Running command 'my_main'
+[INFO 16:32:41] pymarl Started run with ID "1"
+[DEBUG 16:32:41] pymarl Starting Heartbeat
+[DEBUG 16:32:41] my_main Started
+[WARNING 16:32:41] my_main CUDA flag use_cuda was switched OFF automatically because no CUDA devices are available!
+[INFO 16:32:41] my_main Experiment Parameters:
+[INFO 16:32:41] my_main 
+
+{   'action_selector': 'epsilon_greedy',
+    'add_value_last_step': True,
+    'agent': 'rnn',
+    'agent_output_type': 'q',
+    'batch_size': 32,
+    'batch_size_run': 1,
+    'buffer_cpu_only': True,
+    'buffer_size': 5000,
+    'checkpoint_path': '',
+    'common_reward': False,
+    'double_q': True,
+    'env': 'iot',
+    'env_args': {   'map_name': 'mock',
+                    'seed': 996263604},
+    'epsilon_anneal_time': 200000,
+    'epsilon_finish': 0.05,
+    'epsilon_start': 1.0,
+    'evaluate': False,
+    'evaluation_epsilon': 0.0,
+    'gamma': 0.99,
+    'grad_norm_clip': 10,
+    'hidden_dim': 128,
+    'hypergroup': None,
+    'label': 'default_label',
+    'learner': 'q_learner',
+    'learner_log_interval': 5000,
+    'load_step': 0,
+    'local_results_path': 'results',
+    'log_interval': 5000,
+    'lr': 0.0003,
+    'mac': 'basic_mac',
+    'mixer': None,
+    'name': 'iql',
+    'obs_agent_id': True,
+    'obs_individual_obs': False,
+    'obs_last_action': False,
+    'optim_alpha': 0.99,
+    'optim_eps': 1e-05,
+    'render': False,
+    'repeat_id': 1,
+    'reward_scalarisation': None,
+    'runner': 'episode',
+    'runner_log_interval': 5000,
+    'save_model': True,
+    'save_model_interval': 25000,
+    'save_replay': False,
+    'seed': 996263604,
+    'standardise_returns': False,
+    'standardise_rewards': True,
+    't_max': 200000,
+    'target_update_interval_or_tau': 200,
+    'test_greedy': True,
+    'test_interval': 5000,
+    'test_nepisode': 10,
+    'use_cuda': False,
+    'use_rnn': False,
+    'use_tensorboard': False,
+    'use_wandb': False,
+    'wandb_mode': 'offline',
+    'wandb_project': None,
+    'wandb_save_model': False,
+    'wandb_team': None}
+
+[INFO 16:32:42] my_main Beginning training for 200000 timesteps
+/Users/rajiv/Desktop/FinalYearProject-MARL/training/epymarl/src/components/episode_buffer.py:93: UserWarning: Using a non-tuple sequence for multidimensional indexing is deprecated and will be changed in pytorch 2.9; use x[tuple(seq)] instead of x[seq]. In pytorch 2.9 this will be interpreted as tensor index, x[torch.tensor(seq)], which will result either in an error or a different result (Triggered internally at /Users/runner/work/pytorch/pytorch/torch/csrc/autograd/python_variable_indexing.cpp:355.)
+  target["filled"][slices] = 1
+/Users/rajiv/Desktop/FinalYearProject-MARL/training/epymarl/src/components/episode_buffer.py:105: UserWarning: Using a non-tuple sequence for multidimensional indexing is deprecated and will be changed in pytorch 2.9; use x[tuple(seq)] instead of x[seq]. In pytorch 2.9 this will be interpreted as tensor index, x[torch.tensor(seq)], which will result either in an error or a different result (Triggered internally at /Users/runner/work/pytorch/pytorch/torch/csrc/autograd/python_variable_indexing.cpp:355.)
+  self._check_safe_view(v, target[k][_slices])
+/Users/rajiv/Desktop/FinalYearProject-MARL/training/epymarl/src/components/episode_buffer.py:106: UserWarning: Using a non-tuple sequence for multidimensional indexing is deprecated and will be changed in pytorch 2.9; use x[tuple(seq)] instead of x[seq]. In pytorch 2.9 this will be interpreted as tensor index, x[torch.tensor(seq)], which will result either in an error or a different result (Triggered internally at /Users/runner/work/pytorch/pytorch/torch/csrc/autograd/python_variable_indexing.cpp:355.)
+  target[k][_slices] = v.view_as(target[k][_slices])
+/Users/rajiv/Desktop/FinalYearProject-MARL/training/epymarl/src/components/episode_buffer.py:110: UserWarning: Using a non-tuple sequence for multidimensional indexing is deprecated and will be changed in pytorch 2.9; use x[tuple(seq)] instead of x[seq]. In pytorch 2.9 this will be interpreted as tensor index, x[torch.tensor(seq)], which will result either in an error or a different result (Triggered internally at /Users/runner/work/pytorch/pytorch/torch/csrc/autograd/python_variable_indexing.cpp:355.)
+  v = target[k][_slices]
+/Users/rajiv/Desktop/FinalYearProject-MARL/training/epymarl/src/components/episode_buffer.py:113: UserWarning: Using a non-tuple sequence for multidimensional indexing is deprecated and will be changed in pytorch 2.9; use x[tuple(seq)] instead of x[seq]. In pytorch 2.9 this will be interpreted as tensor index, x[torch.tensor(seq)], which will result either in an error or a different result (Triggered internally at /Users/runner/work/pytorch/pytorch/torch/csrc/autograd/python_variable_indexing.cpp:355.)
+  target[new_k][_slices] = v.view_as(target[new_k][_slices])
+[INFO 16:32:42] my_main t_env: 288 / 200000
+[INFO 16:32:42] my_main Estimated time left: 3 seconds. Time passed: 0 seconds
+[INFO 16:32:42] my_main Saving models to results/models/iql_seed996263604_mock_2026-08-13 16:32:41.647001/288
+[INFO 16:32:44] my_main Recent Stats | t_env:       5184 | Episode:       18
+agent_0_return_mean:       4.8400	agent_0_return_std:        0.0000	agent_1_return_mean:       2.5900	agent_1_return_std:        0.0000
+agent_2_return_mean:       0.8000	agent_2_return_std:        0.0000	agent_3_return_mean:      -2.1100	agent_3_return_std:        0.0000
+ep_length_mean:          288.0000	episode_limit_mean:      288.0000	epsilon:                   1.0000	test_agent_0_return_mean:-32.8600
+test_agent_0_return_std:   0.0000	test_agent_1_return_mean:-28.0000	test_agent_1_return_std:   0.0000	test_agent_2_return_mean:-42.0000
+test_agent_2_return_std:   0.0000	test_agent_3_return_mean:-43.0000	test_agent_3_return_std:   0.0000	test_ep_length_mean:     288.0000
+test_episode_limit_mean: 288.0000	test_total_return_mean:  -145.8600	test_total_return_std:     0.0000	total_return_mean:         6.1200
+total_return_std:          0.0000	
+[INFO 16:32:44] my_main t_env: 5472 / 200000
+[INFO 16:32:44] my_main Estimated time left: 1 minutes, 8 seconds. Time passed: 1 seconds
+/Users/rajiv/Desktop/FinalYearProject-MARL/training/epymarl/src/components/episode_buffer.py:152: UserWarning: Using a non-tuple sequence for multidimensional indexing is deprecated and will be changed in pytorch 2.9; use x[tuple(seq)] instead of x[seq]. In pytorch 2.9 this will be interpreted as tensor index, x[torch.tensor(seq)], which will result either in an error or a different result (Triggered internally at /Users/runner/work/pytorch/pytorch/torch/csrc/autograd/python_variable_indexing.cpp:355.)
+  new_data.transition_data[k] = v[item]
+[INFO 16:32:46] my_main Recent Stats | t_env:      10368 | Episode:       36
+agent_0_return_mean:       1.3422	agent_0_return_std:        2.5230	agent_1_return_mean:       1.0975	agent_1_return_std:        2.3923
+agent_2_return_mean:      -0.6975	agent_2_return_std:        3.4192	agent_3_return_mean:      -1.6506	agent_3_return_std:        2.9679
+ep_length_mean:          288.0000	episode_limit_mean:      288.0000	epsilon:                   0.9754	grad_norm:                 0.1145
+loss:                      0.0028	q_taken_mean:             -0.0102	target_mean:              -0.0004	td_error_abs:              0.0415
+test_agent_0_return_mean:-32.8600	test_agent_0_return_std:   0.0000	test_agent_1_return_mean:-28.0000	test_agent_1_return_std:   0.0000
+test_agent_2_return_mean:-42.0000	test_agent_2_return_std:   0.0000	test_agent_3_return_mean:-43.0000	test_agent_3_return_std:   0.0000
+test_ep_length_mean:     288.0000	test_episode_limit_mean: 288.0000	test_total_return_mean:  -145.8600	test_total_return_std:     0.0000
+total_return_mean:         0.0917	total_return_std:          6.0066	
+[INFO 16:32:46] my_main t_env: 10656 / 200000
+[INFO 16:32:46] my_main Estimated time left: 1 minutes, 18 seconds. Time passed: 4 seconds
+[INFO 16:32:49] my_main Recent Stats | t_env:      15552 | Episode:       54
+agent_0_return_mean:       0.2774	agent_0_return_std:        3.2752	agent_1_return_mean:      -0.0252	agent_1_return_std:        3.9743
+agent_2_return_mean:      -0.4935	agent_2_return_std:        4.3478	agent_3_return_mean:      -2.0181	agent_3_return_std:        4.0882
+ep_length_mean:          288.0000	episode_limit_mean:      288.0000	epsilon:                   0.9508	grad_norm:                 0.0692
+loss:                      0.0015	q_taken_mean:             -0.0060	target_mean:              -0.0003	td_error_abs:              0.0258
+test_agent_0_return_mean:-26.0800	test_agent_0_return_std:   0.0000	test_agent_1_return_mean:-28.1333	test_agent_1_return_std:   0.0000
+test_agent_2_return_mean:-42.0000	test_agent_2_return_std:   0.0000	test_agent_3_return_mean:-43.0700	test_agent_3_return_std:   0.0000
+test_ep_length_mean:     288.0000	test_episode_limit_mean: 288.0000	test_total_return_mean:  -139.2833	test_total_return_std:     0.0000
+total_return_mean:        -2.2594	total_return_std:          8.8546	
+[INFO 16:32:49] my_main t_env: 15840 / 200000
+[INFO 16:32:49] my_main Estimated time left: 1 minutes, 47 seconds. Time passed: 7 seconds
+[INFO 16:32:52] my_main Recent Stats | t_env:      20736 | Episode:       72
+agent_0_return_mean:      -0.4289	agent_0_return_std:        3.6636	agent_1_return_mean:      -0.6179	agent_1_return_std:        4.2542
+agent_2_return_mean:      -1.2386	agent_2_return_std:        4.8713	agent_3_return_mean:      -2.2458	agent_3_return_std:        4.6594
+ep_length_mean:          288.0000	episode_limit_mean:      288.0000	epsilon:                   0.9261	grad_norm:                 0.0498
+loss:                      0.0010	q_taken_mean:             -0.0042	target_mean:              -0.0000	td_error_abs:              0.0185
+test_agent_0_return_mean:-27.5600	test_agent_0_return_std:   0.0000	test_agent_1_return_mean:-28.1375	test_agent_1_return_std:   0.0000
+test_agent_2_return_mean:-42.0000	test_agent_2_return_std:   0.0000	test_agent_3_return_mean:-43.0525	test_agent_3_return_std:   0.0000
+test_ep_length_mean:     288.0000	test_episode_limit_mean: 288.0000	test_total_return_mean:  -140.7500	test_total_return_std:     0.0000
+total_return_mean:        -4.5312	total_return_std:          8.7080	
+[INFO 16:32:52] my_main t_env: 21024 / 200000
+[INFO 16:32:52] my_main Estimated time left: 1 minutes, 48 seconds. Time passed: 10 seconds
+[INFO 16:32:55] my_main Saving models to results/models/iql_seed996263604_mock_2026-08-13 16:32:41.647001/25344
+[INFO 16:32:55] my_main Recent Stats | t_env:      25920 | Episode:       90
+agent_0_return_mean:      -1.1317	agent_0_return_std:        4.2412	agent_1_return_mean:      -1.0754	agent_1_return_std:        4.1320
+agent_2_return_mean:      -1.9282	agent_2_return_std:        4.9402	agent_3_return_mean:      -3.1551	agent_3_return_std:        4.8473
+ep_length_mean:          288.0000	episode_limit_mean:      288.0000	epsilon:                   0.9015	grad_norm:                 0.0380
+loss:                      0.0007	q_taken_mean:             -0.0028	target_mean:               0.0004	td_error_abs:              0.0141
+test_agent_0_return_mean:-28.4480	test_agent_0_return_std:   0.0000	test_agent_1_return_mean:-28.1100	test_agent_1_return_std:   0.0000
+test_agent_2_return_mean:-42.0000	test_agent_2_return_std:   0.0000	test_agent_3_return_mean:-43.0420	test_agent_3_return_std:   0.0000
+test_ep_length_mean:     288.0000	test_episode_limit_mean: 288.0000	test_total_return_mean:  -141.6000	test_total_return_std:     0.0000
+total_return_mean:        -7.2904	total_return_std:          8.9761	
+[INFO 16:32:55] my_main t_env: 26208 / 200000
+[INFO 16:32:55] my_main Estimated time left: 1 minutes, 47 seconds. Time passed: 13 seconds
+[INFO 16:32:58] my_main Recent Stats | t_env:      31104 | Episode:      108
+agent_0_return_mean:      -2.3306	agent_0_return_std:        4.8950	agent_1_return_mean:      -2.1767	agent_1_return_std:        5.2644
+agent_2_return_mean:      -2.9536	agent_2_return_std:        6.4440	agent_3_return_mean:      -3.7500	agent_3_return_std:        6.2400
+ep_length_mean:          288.0000	episode_limit_mean:      288.0000	epsilon:                   0.8769	grad_norm:                 0.0305
+loss:                      0.0006	q_taken_mean:             -0.0019	target_mean:               0.0007	td_error_abs:              0.0114
+test_agent_0_return_mean:-28.2760	test_agent_0_return_std:   0.0000	test_agent_1_return_mean:-28.1100	test_agent_1_return_std:   0.0000
+test_agent_2_return_mean:-42.0000	test_agent_2_return_std:   0.0000	test_agent_3_return_mean:-43.0420	test_agent_3_return_std:   0.0000
+test_ep_length_mean:     288.0000	test_episode_limit_mean: 288.0000	test_total_return_mean:  -141.4280	test_total_return_std:     0.0000
+total_return_mean:       -11.2108	total_return_std:         11.6943	
+[INFO 16:32:58] my_main t_env: 31392 / 200000
+[INFO 16:32:58] my_main Estimated time left: 1 minutes, 44 seconds. Time passed: 16 seconds
+[INFO 16:33:01] my_main Recent Stats | t_env:      36288 | Episode:      126
+agent_0_return_mean:      -2.4076	agent_0_return_std:        5.1044	agent_1_return_mean:      -2.8779	agent_1_return_std:        5.2106
+agent_2_return_mean:      -4.1933	agent_2_return_std:        6.4904	agent_3_return_mean:      -5.2764	agent_3_return_std:        5.9231
+ep_length_mean:          288.0000	episode_limit_mean:      288.0000	epsilon:                   0.8523	grad_norm:                 0.0077
+loss:                      0.0000	q_taken_mean:              0.0006	target_mean:               0.0012	td_error_abs:              0.0032
+test_agent_0_return_mean:-28.1040	test_agent_0_return_std:   0.0000	test_agent_1_return_mean:-28.1100	test_agent_1_return_std:   0.0000
+test_agent_2_return_mean:-42.0000	test_agent_2_return_std:   0.0000	test_agent_3_return_mean:-43.0420	test_agent_3_return_std:   0.0000
+test_ep_length_mean:     288.0000	test_episode_limit_mean: 288.0000	test_total_return_mean:  -141.2560	test_total_return_std:     0.0000
+total_return_mean:       -14.7552	total_return_std:         11.6971	
+[INFO 16:33:02] my_main t_env: 36576 / 200000
+[INFO 16:33:02] my_main Estimated time left: 1 minutes, 39 seconds. Time passed: 19 seconds
+[INFO 16:33:04] my_main Recent Stats | t_env:      41472 | Episode:      144
+agent_0_return_mean:      -3.5391	agent_0_return_std:        5.5040	agent_1_return_mean:      -3.1063	agent_1_return_std:        4.4222
+agent_2_return_mean:      -5.8154	agent_2_return_std:        6.6964	agent_3_return_mean:      -7.0190	agent_3_return_std:        5.7788
+ep_length_mean:          288.0000	episode_limit_mean:      288.0000	epsilon:                   0.8276	grad_norm:                 0.0030
+loss:                      0.0000	q_taken_mean:              0.0017	target_mean:               0.0019	td_error_abs:              0.0012
+test_agent_0_return_mean:-32.0000	test_agent_0_return_std:   0.0000	test_agent_1_return_mean:-28.0300	test_agent_1_return_std:   0.0000
+test_agent_2_return_mean:-42.0000	test_agent_2_return_std:   0.0000	test_agent_3_return_mean:-43.0000	test_agent_3_return_std:   0.0000
+test_ep_length_mean:     288.0000	test_episode_limit_mean: 288.0000	test_total_return_mean:  -145.0300	test_total_return_std:     0.0000
+total_return_mean:       -19.4799	total_return_std:         11.0775	
+[INFO 16:33:05] my_main t_env: 41760 / 200000
+[INFO 16:33:05] my_main Estimated time left: 1 minutes, 34 seconds. Time passed: 22 seconds
+[INFO 16:33:08] my_main Recent Stats | t_env:      46656 | Episode:      162
+agent_0_return_mean:      -4.3694	agent_0_return_std:        5.5376	agent_1_return_mean:      -3.7579	agent_1_return_std:        4.4018
+agent_2_return_mean:      -6.6147	agent_2_return_std:        6.8746	agent_3_return_mean:      -8.0568	agent_3_return_std:        5.8467
+ep_length_mean:          288.0000	episode_limit_mean:      288.0000	epsilon:                   0.8030	grad_norm:                 0.0009
+loss:                      0.0000	q_taken_mean:              0.0026	target_mean:               0.0026	td_error_abs:              0.0005
+test_agent_0_return_mean:-32.0000	test_agent_0_return_std:   0.0000	test_agent_1_return_mean:-28.0000	test_agent_1_return_std:   0.0000
+test_agent_2_return_mean:-42.0000	test_agent_2_return_std:   0.0000	test_agent_3_return_mean:-43.0000	test_agent_3_return_std:   0.0000
+test_ep_length_mean:     288.0000	test_episode_limit_mean: 288.0000	test_total_return_mean:  -145.0000	test_total_return_std:     0.0000
+total_return_mean:       -22.7988	total_return_std:         11.5174	
+[INFO 16:33:08] my_main t_env: 46944 / 200000
+[INFO 16:33:08] my_main Estimated time left: 1 minutes, 30 seconds. Time passed: 25 seconds
+[INFO 16:33:10] my_main Saving models to results/models/iql_seed996263604_mock_2026-08-13 16:32:41.647001/50400
+[INFO 16:33:11] my_main Recent Stats | t_env:      51840 | Episode:      180
+agent_0_return_mean:      -5.0912	agent_0_return_std:        4.9820	agent_1_return_mean:      -4.5042	agent_1_return_std:        4.7191
+agent_2_return_mean:      -7.6710	agent_2_return_std:        7.4507	agent_3_return_mean:      -9.1359	agent_3_return_std:        5.8427
+ep_length_mean:          288.0000	episode_limit_mean:      288.0000	epsilon:                   0.7784	grad_norm:                 0.0004
+loss:                      0.0000	q_taken_mean:              0.0033	target_mean:               0.0033	td_error_abs:              0.0003
+test_agent_0_return_mean:-32.0000	test_agent_0_return_std:   0.0000	test_agent_1_return_mean:-28.0000	test_agent_1_return_std:   0.0000
+test_agent_2_return_mean:-42.0000	test_agent_2_return_std:   0.0000	test_agent_3_return_mean:-43.0000	test_agent_3_return_std:   0.0000
+test_ep_length_mean:     288.0000	test_episode_limit_mean: 288.0000	test_total_return_mean:  -145.0000	test_total_return_std:     0.0000
+total_return_mean:       -26.4023	total_return_std:         11.3861	
+[INFO 16:33:11] my_main t_env: 52128 / 200000
+[INFO 16:33:11] my_main Estimated time left: 1 minutes, 25 seconds. Time passed: 28 seconds
+[INFO 16:33:14] my_main Recent Stats | t_env:      57024 | Episode:      198
+agent_0_return_mean:      -6.8630	agent_0_return_std:        5.3773	agent_1_return_mean:      -5.5753	agent_1_return_std:        4.4413
+agent_2_return_mean:      -8.5212	agent_2_return_std:        7.2532	agent_3_return_mean:     -10.9093	agent_3_return_std:        5.7758
+ep_length_mean:          288.0000	episode_limit_mean:      288.0000	epsilon:                   0.7538	grad_norm:                 0.0003
+loss:                      0.0000	q_taken_mean:              0.0041	target_mean:               0.0041	td_error_abs:              0.0002
+test_agent_0_return_mean:-32.0000	test_agent_0_return_std:   0.0000	test_agent_1_return_mean:-28.0000	test_agent_1_return_std:   0.0000
+test_agent_2_return_mean:-42.0000	test_agent_2_return_std:   0.0000	test_agent_3_return_mean:-43.0000	test_agent_3_return_std:   0.0000
+test_ep_length_mean:     288.0000	test_episode_limit_mean: 288.0000	test_total_return_mean:  -145.0000	test_total_return_std:     0.0000
+total_return_mean:       -31.8689	total_return_std:         10.8825	
+[INFO 16:33:14] my_main t_env: 57312 / 200000
+[INFO 16:33:14] my_main Estimated time left: 1 minutes, 29 seconds. Time passed: 32 seconds
+[INFO 16:33:17] my_main Recent Stats | t_env:      62208 | Episode:      216
+agent_0_return_mean:      -8.1253	agent_0_return_std:        5.2085	agent_1_return_mean:      -6.1512	agent_1_return_std:        4.6844
+agent_2_return_mean:      -9.5859	agent_2_return_std:        7.2141	agent_3_return_mean:     -11.9084	agent_3_return_std:        6.2573
+ep_length_mean:          288.0000	episode_limit_mean:      288.0000	epsilon:                   0.7291	grad_norm:                 0.0002
+loss:                      0.0000	q_taken_mean:              0.0049	target_mean:               0.0049	td_error_abs:              0.0002
+test_agent_0_return_mean:-32.0000	test_agent_0_return_std:   0.0000	test_agent_1_return_mean:-28.0000	test_agent_1_return_std:   0.0000
+test_agent_2_return_mean:-42.0000	test_agent_2_return_std:   0.0000	test_agent_3_return_mean:-43.0000	test_agent_3_return_std:   0.0000
+test_ep_length_mean:     288.0000	test_episode_limit_mean: 288.0000	test_total_return_mean:  -145.0000	test_total_return_std:     0.0000
+total_return_mean:       -35.7709	total_return_std:         11.0046	
+[INFO 16:33:17] my_main t_env: 62496 / 200000
+[INFO 16:33:17] my_main Estimated time left: 1 minutes, 21 seconds. Time passed: 35 seconds
+[INFO 16:33:20] my_main Recent Stats | t_env:      67392 | Episode:      234
+agent_0_return_mean:      -8.2508	agent_0_return_std:        5.1326	agent_1_return_mean:      -7.1098	agent_1_return_std:        5.0851
+agent_2_return_mean:     -10.1021	agent_2_return_std:        6.9895	agent_3_return_mean:     -12.0087	agent_3_return_std:        6.1723
+ep_length_mean:          288.0000	episode_limit_mean:      288.0000	epsilon:                   0.7045	grad_norm:                 0.0002
+loss:                      0.0000	q_taken_mean:              0.0057	target_mean:               0.0057	td_error_abs:              0.0002
+test_agent_0_return_mean:-32.0000	test_agent_0_return_std:   0.0000	test_agent_1_return_mean:-28.0000	test_agent_1_return_std:   0.0000
+test_agent_2_return_mean:-42.0000	test_agent_2_return_std:   0.0000	test_agent_3_return_mean:-43.0000	test_agent_3_return_std:   0.0000
+test_ep_length_mean:     288.0000	test_episode_limit_mean: 288.0000	test_total_return_mean:  -145.0000	test_total_return_std:     0.0000
+total_return_mean:       -37.4713	total_return_std:         10.5718	
+[INFO 16:33:20] my_main t_env: 67680 / 200000
+[INFO 16:33:20] my_main Estimated time left: 1 minutes, 21 seconds. Time passed: 38 seconds
+[INFO 16:33:23] my_main Recent Stats | t_env:      72576 | Episode:      252
+agent_0_return_mean:      -8.9524	agent_0_return_std:        4.8706	agent_1_return_mean:      -7.7753	agent_1_return_std:        4.9959
+agent_2_return_mean:     -11.0450	agent_2_return_std:        6.6058	agent_3_return_mean:     -13.0029	agent_3_return_std:        6.2437
+ep_length_mean:          288.0000	episode_limit_mean:      288.0000	epsilon:                   0.6799	grad_norm:                 0.0002
+loss:                      0.0000	q_taken_mean:              0.0065	target_mean:               0.0065	td_error_abs:              0.0002
+test_agent_0_return_mean:-32.0000	test_agent_0_return_std:   0.0000	test_agent_1_return_mean:-28.0000	test_agent_1_return_std:   0.0000
+test_agent_2_return_mean:-42.0000	test_agent_2_return_std:   0.0000	test_agent_3_return_mean:-43.0000	test_agent_3_return_std:   0.0000
+test_ep_length_mean:     288.0000	test_episode_limit_mean: 288.0000	test_total_return_mean:  -145.0000	test_total_return_std:     0.0000
+total_return_mean:       -40.7757	total_return_std:          9.9358	
+[INFO 16:33:23] my_main t_env: 72864 / 200000
+[INFO 16:33:23] my_main Estimated time left: 1 minutes, 17 seconds. Time passed: 41 seconds
+[INFO 16:33:25] my_main Saving models to results/models/iql_seed996263604_mock_2026-08-13 16:32:41.647001/75456
+[INFO 16:33:26] my_main Recent Stats | t_env:      77760 | Episode:      270
+agent_0_return_mean:      -9.5863	agent_0_return_std:        5.1630	agent_1_return_mean:      -9.0360	agent_1_return_std:        4.8691
+agent_2_return_mean:     -12.1684	agent_2_return_std:        6.2309	agent_3_return_mean:     -13.3454	agent_3_return_std:        6.2753
+ep_length_mean:          288.0000	episode_limit_mean:      288.0000	epsilon:                   0.6553	grad_norm:                 0.0003
+loss:                      0.0000	q_taken_mean:              0.0071	target_mean:               0.0071	td_error_abs:              0.0001
+test_agent_0_return_mean:-32.0000	test_agent_0_return_std:   0.0000	test_agent_1_return_mean:-28.0000	test_agent_1_return_std:   0.0000
+test_agent_2_return_mean:-42.0000	test_agent_2_return_std:   0.0000	test_agent_3_return_mean:-43.0000	test_agent_3_return_std:   0.0000
+test_ep_length_mean:     288.0000	test_episode_limit_mean: 288.0000	test_total_return_mean:  -145.0000	test_total_return_std:     0.0000
+total_return_mean:       -44.1362	total_return_std:         10.1681	
+[INFO 16:33:26] my_main t_env: 78048 / 200000
+[INFO 16:33:26] my_main Estimated time left: 1 minutes, 13 seconds. Time passed: 44 seconds
+[INFO 16:33:29] my_main Recent Stats | t_env:      82944 | Episode:      288
+agent_0_return_mean:      -9.8377	agent_0_return_std:        5.1604	agent_1_return_mean:      -9.9892	agent_1_return_std:        5.2196
+agent_2_return_mean:     -13.6280	agent_2_return_std:        6.0730	agent_3_return_mean:     -13.9780	agent_3_return_std:        6.3118
+ep_length_mean:          288.0000	episode_limit_mean:      288.0000	epsilon:                   0.6306	grad_norm:                 0.0003
+loss:                      0.0000	q_taken_mean:              0.0077	target_mean:               0.0078	td_error_abs:              0.0001
+test_agent_0_return_mean:-32.0000	test_agent_0_return_std:   0.0000	test_agent_1_return_mean:-28.0000	test_agent_1_return_std:   0.0000
+test_agent_2_return_mean:-42.0000	test_agent_2_return_std:   0.0000	test_agent_3_return_mean:-43.0000	test_agent_3_return_std:   0.0000
+test_ep_length_mean:     288.0000	test_episode_limit_mean: 288.0000	test_total_return_mean:  -145.0000	test_total_return_std:     0.0000
+total_return_mean:       -47.4329	total_return_std:         10.5281	
+[INFO 16:33:30] my_main t_env: 83232 / 200000
+[INFO 16:33:30] my_main Estimated time left: 1 minutes, 9 seconds. Time passed: 47 seconds
+[INFO 16:33:33] my_main Recent Stats | t_env:      88128 | Episode:      306
+agent_0_return_mean:     -10.6936	agent_0_return_std:        5.1027	agent_1_return_mean:     -10.8099	agent_1_return_std:        4.9598
+agent_2_return_mean:     -14.0811	agent_2_return_std:        6.2101	agent_3_return_mean:     -14.4482	agent_3_return_std:        6.3735
+ep_length_mean:          288.0000	episode_limit_mean:      288.0000	epsilon:                   0.6060	grad_norm:                 0.0002
+loss:                      0.0000	q_taken_mean:              0.0084	target_mean:               0.0084	td_error_abs:              0.0001
+test_agent_0_return_mean:-32.0000	test_agent_0_return_std:   0.0000	test_agent_1_return_mean:-28.0000	test_agent_1_return_std:   0.0000
+test_agent_2_return_mean:-42.0000	test_agent_2_return_std:   0.0000	test_agent_3_return_mean:-43.0000	test_agent_3_return_std:   0.0000
+test_ep_length_mean:     288.0000	test_episode_limit_mean: 288.0000	test_total_return_mean:  -145.0000	test_total_return_std:     0.0000
+total_return_mean:       -50.0328	total_return_std:          9.8407	
+[INFO 16:33:33] my_main t_env: 88416 / 200000
+[INFO 16:33:33] my_main Estimated time left: 1 minutes, 11 seconds. Time passed: 51 seconds
+[INFO 16:33:36] my_main Recent Stats | t_env:      93312 | Episode:      324
+agent_0_return_mean:     -11.9259	agent_0_return_std:        4.6354	agent_1_return_mean:     -11.7421	agent_1_return_std:        5.0024
+agent_2_return_mean:     -15.7844	agent_2_return_std:        6.1914	agent_3_return_mean:     -15.5313	agent_3_return_std:        6.2515
+ep_length_mean:          288.0000	episode_limit_mean:      288.0000	epsilon:                   0.5814	grad_norm:                 0.0002
+loss:                      0.0000	q_taken_mean:              0.0091	target_mean:               0.0091	td_error_abs:              0.0001
+test_agent_0_return_mean:-32.0000	test_agent_0_return_std:   0.0000	test_agent_1_return_mean:-28.0000	test_agent_1_return_std:   0.0000
+test_agent_2_return_mean:-42.0000	test_agent_2_return_std:   0.0000	test_agent_3_return_mean:-43.0000	test_agent_3_return_std:   0.0000
+test_ep_length_mean:     288.0000	test_episode_limit_mean: 288.0000	test_total_return_mean:  -145.0000	test_total_return_std:     0.0000
+total_return_mean:       -54.9838	total_return_std:          9.7838	
+[INFO 16:33:36] my_main t_env: 93600 / 200000
+[INFO 16:33:36] my_main Estimated time left: 1 minutes, 2 seconds. Time passed: 54 seconds
+[INFO 16:33:39] my_main Recent Stats | t_env:      98496 | Episode:      342
+agent_0_return_mean:     -13.1220	agent_0_return_std:        5.0356	agent_1_return_mean:     -12.5173	agent_1_return_std:        4.8583
+agent_2_return_mean:     -17.6187	agent_2_return_std:        6.3291	agent_3_return_mean:     -17.1678	agent_3_return_std:        6.0109
+ep_length_mean:          288.0000	episode_limit_mean:      288.0000	epsilon:                   0.5568	grad_norm:                 0.0002
+loss:                      0.0000	q_taken_mean:              0.0096	target_mean:               0.0097	td_error_abs:              0.0001
+test_agent_0_return_mean:-32.0000	test_agent_0_return_std:   0.0000	test_agent_1_return_mean:-28.0000	test_agent_1_return_std:   0.0000
+test_agent_2_return_mean:-42.0000	test_agent_2_return_std:   0.0000	test_agent_3_return_mean:-43.0000	test_agent_3_return_std:   0.0000
+test_ep_length_mean:     288.0000	test_episode_limit_mean: 288.0000	test_total_return_mean:  -145.0000	test_total_return_std:     0.0000
+total_return_mean:       -60.4258	total_return_std:         10.8301	
+[INFO 16:33:39] my_main t_env: 98784 / 200000
+[INFO 16:33:39] my_main Estimated time left: 1 minutes, 0 seconds. Time passed: 57 seconds
+[INFO 16:33:40] my_main Saving models to results/models/iql_seed996263604_mock_2026-08-13 16:32:41.647001/100512
+[INFO 16:33:42] my_main Recent Stats | t_env:     103680 | Episode:      360
+agent_0_return_mean:     -14.0944	agent_0_return_std:        5.3977	agent_1_return_mean:     -12.6578	agent_1_return_std:        5.2226
+agent_2_return_mean:     -18.5739	agent_2_return_std:        6.4708	agent_3_return_mean:     -18.2967	agent_3_return_std:        5.9979
+ep_length_mean:          288.0000	episode_limit_mean:      288.0000	epsilon:                   0.5321	grad_norm:                 0.0002
+loss:                      0.0000	q_taken_mean:              0.0104	target_mean:               0.0104	td_error_abs:              0.0001
+test_agent_0_return_mean:-32.0000	test_agent_0_return_std:   0.0000	test_agent_1_return_mean:-28.0000	test_agent_1_return_std:   0.0000
+test_agent_2_return_mean:-42.0000	test_agent_2_return_std:   0.0000	test_agent_3_return_mean:-43.0000	test_agent_3_return_std:   0.0000
+test_ep_length_mean:     288.0000	test_episode_limit_mean: 288.0000	test_total_return_mean:  -145.0000	test_total_return_std:     0.0000
+total_return_mean:       -63.6228	total_return_std:         11.2946	
+[INFO 16:33:42] my_main t_env: 103968 / 200000
+[INFO 16:33:42] my_main Estimated time left: 57 seconds. Time passed: 1 minutes, 0 seconds
+[INFO 16:33:45] my_main Recent Stats | t_env:     108864 | Episode:      378
+agent_0_return_mean:     -15.1759	agent_0_return_std:        5.3891	agent_1_return_mean:     -12.5921	agent_1_return_std:        4.8605
+agent_2_return_mean:     -19.6117	agent_2_return_std:        6.2730	agent_3_return_mean:     -19.3781	agent_3_return_std:        6.0443
+ep_length_mean:          288.0000	episode_limit_mean:      288.0000	epsilon:                   0.5075	grad_norm:                 0.0002
+loss:                      0.0000	q_taken_mean:              0.0111	target_mean:               0.0111	td_error_abs:              0.0001
+test_agent_0_return_mean:-32.0000	test_agent_0_return_std:   0.0000	test_agent_1_return_mean:-28.0000	test_agent_1_return_std:   0.0000
+test_agent_2_return_mean:-42.0000	test_agent_2_return_std:   0.0000	test_agent_3_return_mean:-43.0000	test_agent_3_return_std:   0.0000
+test_ep_length_mean:     288.0000	test_episode_limit_mean: 288.0000	test_total_return_mean:  -145.0000	test_total_return_std:     0.0000
+total_return_mean:       -66.7578	total_return_std:         10.5601	
+[INFO 16:33:45] my_main t_env: 109152 / 200000
+[INFO 16:33:45] my_main Estimated time left: 54 seconds. Time passed: 1 minutes, 3 seconds
+[INFO 16:33:48] my_main Recent Stats | t_env:     114048 | Episode:      396
+agent_0_return_mean:     -15.7578	agent_0_return_std:        5.2748	agent_1_return_mean:     -13.3952	agent_1_return_std:        4.7501
+agent_2_return_mean:     -21.2454	agent_2_return_std:        5.4487	agent_3_return_mean:     -20.4679	agent_3_return_std:        5.7517
+ep_length_mean:          288.0000	episode_limit_mean:      288.0000	epsilon:                   0.4829	grad_norm:                 0.0001
+loss:                      0.0000	q_taken_mean:              0.0117	target_mean:               0.0117	td_error_abs:              0.0001
+test_agent_0_return_mean:-32.0000	test_agent_0_return_std:   0.0000	test_agent_1_return_mean:-28.0000	test_agent_1_return_std:   0.0000
+test_agent_2_return_mean:-42.0000	test_agent_2_return_std:   0.0000	test_agent_3_return_mean:-43.0000	test_agent_3_return_std:   0.0000
+test_ep_length_mean:     288.0000	test_episode_limit_mean: 288.0000	test_total_return_mean:  -145.0000	test_total_return_std:     0.0000
+total_return_mean:       -70.8663	total_return_std:         10.5392	
+[INFO 16:33:48] my_main t_env: 114336 / 200000
+[INFO 16:33:48] my_main Estimated time left: 52 seconds. Time passed: 1 minutes, 6 seconds
+[INFO 16:33:51] my_main Recent Stats | t_env:     119232 | Episode:      414
+agent_0_return_mean:     -16.6197	agent_0_return_std:        5.1909	agent_1_return_mean:     -14.2389	agent_1_return_std:        4.6110
+agent_2_return_mean:     -21.8349	agent_2_return_std:        5.6568	agent_3_return_mean:     -21.5281	agent_3_return_std:        6.0074
+ep_length_mean:          288.0000	episode_limit_mean:      288.0000	epsilon:                   0.4583	grad_norm:                 0.0001
+loss:                      0.0000	q_taken_mean:              0.0122	target_mean:               0.0122	td_error_abs:              0.0001
+test_agent_0_return_mean:-32.0000	test_agent_0_return_std:   0.0000	test_agent_1_return_mean:-28.0000	test_agent_1_return_std:   0.0000
+test_agent_2_return_mean:-42.0000	test_agent_2_return_std:   0.0000	test_agent_3_return_mean:-43.0000	test_agent_3_return_std:   0.0000
+test_ep_length_mean:     288.0000	test_episode_limit_mean: 288.0000	test_total_return_mean:  -145.0000	test_total_return_std:     0.0000
+total_return_mean:       -74.2216	total_return_std:         11.2243	
+[INFO 16:33:52] my_main t_env: 119520 / 200000
+[INFO 16:33:52] my_main Estimated time left: 48 seconds. Time passed: 1 minutes, 9 seconds
+[INFO 16:33:55] my_main Recent Stats | t_env:     124416 | Episode:      432
+agent_0_return_mean:     -16.7610	agent_0_return_std:        5.0920	agent_1_return_mean:     -14.9209	agent_1_return_std:        4.6995
+agent_2_return_mean:     -22.7624	agent_2_return_std:        5.4193	agent_3_return_mean:     -22.4688	agent_3_return_std:        5.6222
+ep_length_mean:          288.0000	episode_limit_mean:      288.0000	epsilon:                   0.4336	grad_norm:                 0.0001
+loss:                      0.0000	q_taken_mean:              0.0128	target_mean:               0.0128	td_error_abs:              0.0001
+test_agent_0_return_mean:-32.0000	test_agent_0_return_std:   0.0000	test_agent_1_return_mean:-28.0000	test_agent_1_return_std:   0.0000
+test_agent_2_return_mean:-42.0000	test_agent_2_return_std:   0.0000	test_agent_3_return_mean:-43.0000	test_agent_3_return_std:   0.0000
+test_ep_length_mean:     288.0000	test_episode_limit_mean: 288.0000	test_total_return_mean:  -145.0000	test_total_return_std:     0.0000
+total_return_mean:       -76.9131	total_return_std:         10.9102	
+[INFO 16:33:55] my_main t_env: 124704 / 200000
+[INFO 16:33:55] my_main Estimated time left: 47 seconds. Time passed: 1 minutes, 13 seconds
+[INFO 16:33:56] my_main Saving models to results/models/iql_seed996263604_mock_2026-08-13 16:32:41.647001/125568
+[INFO 16:33:58] my_main Recent Stats | t_env:     129600 | Episode:      450
+agent_0_return_mean:     -17.2002	agent_0_return_std:        4.6169	agent_1_return_mean:     -15.5326	agent_1_return_std:        4.3799
+agent_2_return_mean:     -23.4361	agent_2_return_std:        5.3551	agent_3_return_mean:     -23.6450	agent_3_return_std:        5.6403
+ep_length_mean:          288.0000	episode_limit_mean:      288.0000	epsilon:                   0.4090	grad_norm:                 0.0001
+loss:                      0.0000	q_taken_mean:              0.0133	target_mean:               0.0133	td_error_abs:              0.0001
+test_agent_0_return_mean:-32.0000	test_agent_0_return_std:   0.0000	test_agent_1_return_mean:-28.0000	test_agent_1_return_std:   0.0000
+test_agent_2_return_mean:-42.0000	test_agent_2_return_std:   0.0000	test_agent_3_return_mean:-43.0000	test_agent_3_return_std:   0.0000
+test_ep_length_mean:     288.0000	test_episode_limit_mean: 288.0000	test_total_return_mean:  -145.0000	test_total_return_std:     0.0000
+total_return_mean:       -79.8139	total_return_std:         10.2989	
+[INFO 16:33:58] my_main t_env: 129888 / 200000
+[INFO 16:33:58] my_main Estimated time left: 41 seconds. Time passed: 1 minutes, 16 seconds
+[INFO 16:34:01] my_main Recent Stats | t_env:     134784 | Episode:      468
+agent_0_return_mean:     -17.9230	agent_0_return_std:        4.3184	agent_1_return_mean:     -16.6547	agent_1_return_std:        4.3363
+agent_2_return_mean:     -24.5884	agent_2_return_std:        5.4956	agent_3_return_mean:     -24.0581	agent_3_return_std:        5.1363
+ep_length_mean:          288.0000	episode_limit_mean:      288.0000	epsilon:                   0.3844	grad_norm:                 0.0001
+loss:                      0.0000	q_taken_mean:              0.0137	target_mean:               0.0137	td_error_abs:              0.0001
+test_agent_0_return_mean:-32.0000	test_agent_0_return_std:   0.0000	test_agent_1_return_mean:-28.0000	test_agent_1_return_std:   0.0000
+test_agent_2_return_mean:-42.0000	test_agent_2_return_std:   0.0000	test_agent_3_return_mean:-43.0000	test_agent_3_return_std:   0.0000
+test_ep_length_mean:     288.0000	test_episode_limit_mean: 288.0000	test_total_return_mean:  -145.0000	test_total_return_std:     0.0000
+total_return_mean:       -83.2242	total_return_std:         10.4063	
+[INFO 16:34:01] my_main t_env: 135072 / 200000
+[INFO 16:34:01] my_main Estimated time left: 38 seconds. Time passed: 1 minutes, 19 seconds
+[INFO 16:34:04] my_main Recent Stats | t_env:     139968 | Episode:      486
+agent_0_return_mean:     -18.4286	agent_0_return_std:        4.2246	agent_1_return_mean:     -17.3051	agent_1_return_std:        4.1054
+agent_2_return_mean:     -25.3408	agent_2_return_std:        5.7674	agent_3_return_mean:     -25.7562	agent_3_return_std:        5.1392
+ep_length_mean:          288.0000	episode_limit_mean:      288.0000	epsilon:                   0.3598	grad_norm:                 0.0001
+loss:                      0.0000	q_taken_mean:              0.0141	target_mean:               0.0141	td_error_abs:              0.0000
+test_agent_0_return_mean:-32.0000	test_agent_0_return_std:   0.0000	test_agent_1_return_mean:-28.0000	test_agent_1_return_std:   0.0000
+test_agent_2_return_mean:-42.0000	test_agent_2_return_std:   0.0000	test_agent_3_return_mean:-43.0000	test_agent_3_return_std:   0.0000
+test_ep_length_mean:     288.0000	test_episode_limit_mean: 288.0000	test_total_return_mean:  -145.0000	test_total_return_std:     0.0000
+total_return_mean:       -86.8307	total_return_std:         10.1120	
+[INFO 16:34:04] my_main t_env: 140256 / 200000
+[INFO 16:34:04] my_main Estimated time left: 37 seconds. Time passed: 1 minutes, 22 seconds
+[INFO 16:34:07] my_main Recent Stats | t_env:     145152 | Episode:      504
+agent_0_return_mean:     -18.9970	agent_0_return_std:        4.3652	agent_1_return_mean:     -17.8467	agent_1_return_std:        3.9810
+agent_2_return_mean:     -26.7587	agent_2_return_std:        5.2696	agent_3_return_mean:     -27.1726	agent_3_return_std:        4.7375
+ep_length_mean:          288.0000	episode_limit_mean:      288.0000	epsilon:                   0.3352	grad_norm:                 0.0001
+loss:                      0.0000	q_taken_mean:              0.0147	target_mean:               0.0147	td_error_abs:              0.0000
+test_agent_0_return_mean:-32.0000	test_agent_0_return_std:   0.0000	test_agent_1_return_mean:-28.0000	test_agent_1_return_std:   0.0000
+test_agent_2_return_mean:-42.0000	test_agent_2_return_std:   0.0000	test_agent_3_return_mean:-43.0000	test_agent_3_return_std:   0.0000
+test_ep_length_mean:     288.0000	test_episode_limit_mean: 288.0000	test_total_return_mean:  -145.0000	test_total_return_std:     0.0000
+total_return_mean:       -90.7749	total_return_std:          9.4179	
+[INFO 16:34:07] my_main t_env: 145440 / 200000
+[INFO 16:34:07] my_main Estimated time left: 31 seconds. Time passed: 1 minutes, 25 seconds
+[INFO 16:34:10] my_main Recent Stats | t_env:     150336 | Episode:      522
+agent_0_return_mean:     -19.8753	agent_0_return_std:        4.1723	agent_1_return_mean:     -18.5463	agent_1_return_std:        3.9664
+agent_2_return_mean:     -26.9974	agent_2_return_std:        4.9670	agent_3_return_mean:     -28.0081	agent_3_return_std:        4.8954
+ep_length_mean:          288.0000	episode_limit_mean:      288.0000	epsilon:                   0.3105	grad_norm:                 0.0001
+loss:                      0.0000	q_taken_mean:              0.0153	target_mean:               0.0153	td_error_abs:              0.0001
+test_agent_0_return_mean:-32.0000	test_agent_0_return_std:   0.0000	test_agent_1_return_mean:-28.0000	test_agent_1_return_std:   0.0000
+test_agent_2_return_mean:-42.0000	test_agent_2_return_std:   0.0000	test_agent_3_return_mean:-43.0000	test_agent_3_return_std:   0.0000
+test_ep_length_mean:     288.0000	test_episode_limit_mean: 288.0000	test_total_return_mean:  -145.0000	test_total_return_std:     0.0000
+total_return_mean:       -93.4272	total_return_std:          8.5870	
+[INFO 16:34:11] my_main t_env: 150624 / 200000
+[INFO 16:34:11] my_main Estimated time left: 31 seconds. Time passed: 1 minutes, 28 seconds
+[INFO 16:34:11] my_main Saving models to results/models/iql_seed996263604_mock_2026-08-13 16:32:41.647001/150624
+[INFO 16:34:14] my_main Recent Stats | t_env:     155520 | Episode:      540
+agent_0_return_mean:     -20.9316	agent_0_return_std:        4.0007	agent_1_return_mean:     -19.2541	agent_1_return_std:        3.4675
+agent_2_return_mean:     -28.1216	agent_2_return_std:        4.5615	agent_3_return_mean:     -29.3539	agent_3_return_std:        4.6585
+ep_length_mean:          288.0000	episode_limit_mean:      288.0000	epsilon:                   0.2859	grad_norm:                 0.0001
+loss:                      0.0000	q_taken_mean:              0.0160	target_mean:               0.0160	td_error_abs:              0.0000
+test_agent_0_return_mean:-32.0000	test_agent_0_return_std:   0.0000	test_agent_1_return_mean:-28.0000	test_agent_1_return_std:   0.0000
+test_agent_2_return_mean:-42.0000	test_agent_2_return_std:   0.0000	test_agent_3_return_mean:-43.0000	test_agent_3_return_std:   0.0000
+test_ep_length_mean:     288.0000	test_episode_limit_mean: 288.0000	test_total_return_mean:  -145.0000	test_total_return_std:     0.0000
+total_return_mean:       -97.6611	total_return_std:          7.8673	
+[INFO 16:34:14] my_main t_env: 155808 / 200000
+[INFO 16:34:14] my_main Estimated time left: 28 seconds. Time passed: 1 minutes, 32 seconds
+[INFO 16:34:17] my_main Recent Stats | t_env:     160704 | Episode:      558
+agent_0_return_mean:     -21.3147	agent_0_return_std:        4.0572	agent_1_return_mean:     -19.8932	agent_1_return_std:        3.2849
+agent_2_return_mean:     -29.0446	agent_2_return_std:        4.3967	agent_3_return_mean:     -31.0372	agent_3_return_std:        4.3953
+ep_length_mean:          288.0000	episode_limit_mean:      288.0000	epsilon:                   0.2613	grad_norm:                 0.0001
+loss:                      0.0000	q_taken_mean:              0.0167	target_mean:               0.0167	td_error_abs:              0.0000
+test_agent_0_return_mean:-32.0000	test_agent_0_return_std:   0.0000	test_agent_1_return_mean:-28.0000	test_agent_1_return_std:   0.0000
+test_agent_2_return_mean:-42.0000	test_agent_2_return_std:   0.0000	test_agent_3_return_mean:-43.0000	test_agent_3_return_std:   0.0000
+test_ep_length_mean:     288.0000	test_episode_limit_mean: 288.0000	test_total_return_mean:  -145.0000	test_total_return_std:     0.0000
+total_return_mean:       -101.2897	total_return_std:          7.5944	
+[INFO 16:34:17] my_main t_env: 160992 / 200000
+[INFO 16:34:17] my_main Estimated time left: 23 seconds. Time passed: 1 minutes, 35 seconds
+[INFO 16:34:20] my_main Recent Stats | t_env:     165888 | Episode:      576
+agent_0_return_mean:     -22.5314	agent_0_return_std:        3.8974	agent_1_return_mean:     -20.4203	agent_1_return_std:        3.5556
+agent_2_return_mean:     -30.1891	agent_2_return_std:        4.2619	agent_3_return_mean:     -31.5860	agent_3_return_std:        4.1621
+ep_length_mean:          288.0000	episode_limit_mean:      288.0000	epsilon:                   0.2367	grad_norm:                 0.0001
+loss:                      0.0000	q_taken_mean:              0.0174	target_mean:               0.0174	td_error_abs:              0.0000
+test_agent_0_return_mean:-32.0000	test_agent_0_return_std:   0.0000	test_agent_1_return_mean:-28.0000	test_agent_1_return_std:   0.0000
+test_agent_2_return_mean:-42.0000	test_agent_2_return_std:   0.0000	test_agent_3_return_mean:-43.0000	test_agent_3_return_std:   0.0000
+test_ep_length_mean:     288.0000	test_episode_limit_mean: 288.0000	test_total_return_mean:  -145.0000	test_total_return_std:     0.0000
+total_return_mean:       -104.7269	total_return_std:          7.4900	
+[INFO 16:34:20] my_main t_env: 166176 / 200000
+[INFO 16:34:20] my_main Estimated time left: 20 seconds. Time passed: 1 minutes, 38 seconds
+[INFO 16:34:23] my_main Recent Stats | t_env:     171072 | Episode:      594
+agent_0_return_mean:     -23.3392	agent_0_return_std:        3.6844	agent_1_return_mean:     -20.7902	agent_1_return_std:        3.4220
+agent_2_return_mean:     -30.6444	agent_2_return_std:        4.3297	agent_3_return_mean:     -32.4413	agent_3_return_std:        4.2002
+ep_length_mean:          288.0000	episode_limit_mean:      288.0000	epsilon:                   0.2120	grad_norm:                 0.0001
+loss:                      0.0000	q_taken_mean:              0.0181	target_mean:               0.0181	td_error_abs:              0.0000
+test_agent_0_return_mean:-32.0000	test_agent_0_return_std:   0.0000	test_agent_1_return_mean:-28.0000	test_agent_1_return_std:   0.0000
+test_agent_2_return_mean:-42.0000	test_agent_2_return_std:   0.0000	test_agent_3_return_mean:-43.0000	test_agent_3_return_std:   0.0000
+test_ep_length_mean:     288.0000	test_episode_limit_mean: 288.0000	test_total_return_mean:  -145.0000	test_total_return_std:     0.0000
+total_return_mean:       -107.2152	total_return_std:          7.2349	
+[INFO 16:34:23] my_main t_env: 171360 / 200000
+[INFO 16:34:23] my_main Estimated time left: 16 seconds. Time passed: 1 minutes, 41 seconds
+[INFO 16:34:26] my_main Saving models to results/models/iql_seed996263604_mock_2026-08-13 16:32:41.647001/175680
+[INFO 16:34:26] my_main Recent Stats | t_env:     176256 | Episode:      612
+agent_0_return_mean:     -24.3384	agent_0_return_std:        3.5086	agent_1_return_mean:     -21.1998	agent_1_return_std:        3.4147
+agent_2_return_mean:     -31.6303	agent_2_return_std:        4.5183	agent_3_return_mean:     -33.2386	agent_3_return_std:        4.0295
+ep_length_mean:          288.0000	episode_limit_mean:      288.0000	epsilon:                   0.1874	grad_norm:                 0.0001
+loss:                      0.0000	q_taken_mean:              0.0188	target_mean:               0.0188	td_error_abs:              0.0000
+test_agent_0_return_mean:-32.0000	test_agent_0_return_std:   0.0000	test_agent_1_return_mean:-28.0000	test_agent_1_return_std:   0.0000
+test_agent_2_return_mean:-42.0000	test_agent_2_return_std:   0.0000	test_agent_3_return_mean:-43.0000	test_agent_3_return_std:   0.0000
+test_ep_length_mean:     288.0000	test_episode_limit_mean: 288.0000	test_total_return_mean:  -145.0000	test_total_return_std:     0.0000
+total_return_mean:       -110.4071	total_return_std:          7.2985	
+[INFO 16:34:26] my_main t_env: 176544 / 200000
+[INFO 16:34:26] my_main Estimated time left: 13 seconds. Time passed: 1 minutes, 44 seconds
+[INFO 16:34:29] my_main Recent Stats | t_env:     181440 | Episode:      630
+agent_0_return_mean:     -25.3956	agent_0_return_std:        3.1969	agent_1_return_mean:     -21.7971	agent_1_return_std:        3.4863
+agent_2_return_mean:     -32.6097	agent_2_return_std:        4.6667	agent_3_return_mean:     -33.8520	agent_3_return_std:        3.6426
+ep_length_mean:          288.0000	episode_limit_mean:      288.0000	epsilon:                   0.1628	grad_norm:                 0.0001
+loss:                      0.0000	q_taken_mean:              0.0193	target_mean:               0.0193	td_error_abs:              0.0000
+test_agent_0_return_mean:-32.0000	test_agent_0_return_std:   0.0000	test_agent_1_return_mean:-28.0000	test_agent_1_return_std:   0.0000
+test_agent_2_return_mean:-42.0000	test_agent_2_return_std:   0.0000	test_agent_3_return_mean:-43.0000	test_agent_3_return_std:   0.0000
+test_ep_length_mean:     288.0000	test_episode_limit_mean: 288.0000	test_total_return_mean:  -145.0000	test_total_return_std:     0.0000
+total_return_mean:       -113.6543	total_return_std:          7.1262	
+[INFO 16:34:30] my_main t_env: 181728 / 200000
+[INFO 16:34:30] my_main Estimated time left: 11 seconds. Time passed: 1 minutes, 47 seconds
+[INFO 16:34:33] my_main Recent Stats | t_env:     186624 | Episode:      648
+agent_0_return_mean:     -26.4353	agent_0_return_std:        3.1918	agent_1_return_mean:     -22.3709	agent_1_return_std:        3.4291
+agent_2_return_mean:     -33.4918	agent_2_return_std:        4.5421	agent_3_return_mean:     -34.6246	agent_3_return_std:        3.7477
+ep_length_mean:          288.0000	episode_limit_mean:      288.0000	epsilon:                   0.1382	grad_norm:                 0.0001
+loss:                      0.0000	q_taken_mean:              0.0199	target_mean:               0.0199	td_error_abs:              0.0001
+test_agent_0_return_mean:-32.0000	test_agent_0_return_std:   0.0000	test_agent_1_return_mean:-28.0000	test_agent_1_return_std:   0.0000
+test_agent_2_return_mean:-42.0000	test_agent_2_return_std:   0.0000	test_agent_3_return_mean:-43.0000	test_agent_3_return_std:   0.0000
+test_ep_length_mean:     288.0000	test_episode_limit_mean: 288.0000	test_total_return_mean:  -145.0000	test_total_return_std:     0.0000
+total_return_mean:       -116.9226	total_return_std:          7.0658	
+[INFO 16:34:33] my_main t_env: 186912 / 200000
+[INFO 16:34:33] my_main Estimated time left: 8 seconds. Time passed: 1 minutes, 51 seconds
+[INFO 16:34:36] my_main Recent Stats | t_env:     191808 | Episode:      666
+agent_0_return_mean:     -27.0709	agent_0_return_std:        3.1706	agent_1_return_mean:     -22.8530	agent_1_return_std:        3.2301
+agent_2_return_mean:     -34.2864	agent_2_return_std:        4.1549	agent_3_return_mean:     -35.5499	agent_3_return_std:        3.5106
+ep_length_mean:          288.0000	episode_limit_mean:      288.0000	epsilon:                   0.1135	grad_norm:                 0.0001
+loss:                      0.0000	q_taken_mean:              0.0207	target_mean:               0.0207	td_error_abs:              0.0001
+test_agent_0_return_mean:-32.0000	test_agent_0_return_std:   0.0000	test_agent_1_return_mean:-28.0000	test_agent_1_return_std:   0.0000
+test_agent_2_return_mean:-42.0000	test_agent_2_return_std:   0.0000	test_agent_3_return_mean:-43.0000	test_agent_3_return_std:   0.0000
+test_ep_length_mean:     288.0000	test_episode_limit_mean: 288.0000	test_total_return_mean:  -145.0000	test_total_return_std:     0.0000
+total_return_mean:       -119.7602	total_return_std:          7.0823	
+[INFO 16:34:36] my_main t_env: 192096 / 200000
+[INFO 16:34:36] my_main Estimated time left: 5 seconds. Time passed: 1 minutes, 54 seconds
+[INFO 16:34:39] my_main Recent Stats | t_env:     196992 | Episode:      684
+agent_0_return_mean:     -27.6430	agent_0_return_std:        3.0936	agent_1_return_mean:     -23.5768	agent_1_return_std:        3.0303
+agent_2_return_mean:     -35.5677	agent_2_return_std:        3.7619	agent_3_return_mean:     -36.4110	agent_3_return_std:        3.3160
+ep_length_mean:          288.0000	episode_limit_mean:      288.0000	epsilon:                   0.0889	grad_norm:                 0.0001
+loss:                      0.0000	q_taken_mean:              0.0213	target_mean:               0.0213	td_error_abs:              0.0001
+test_agent_0_return_mean:-32.0000	test_agent_0_return_std:   0.0000	test_agent_1_return_mean:-28.0000	test_agent_1_return_std:   0.0000
+test_agent_2_return_mean:-42.0000	test_agent_2_return_std:   0.0000	test_agent_3_return_mean:-43.0000	test_agent_3_return_std:   0.0000
+test_ep_length_mean:     288.0000	test_episode_limit_mean: 288.0000	test_total_return_mean:  -145.0000	test_total_return_std:     0.0000
+total_return_mean:       -123.1984	total_return_std:          6.6962	
+[INFO 16:34:39] my_main t_env: 197280 / 200000
+[INFO 16:34:39] my_main Estimated time left: 1 seconds. Time passed: 1 minutes, 57 seconds
+[INFO 16:34:41] my_main Finished Training
+[DEBUG 16:34:42] my_main Finished after 0:02:01.
+[INFO 16:34:42] pymarl Completed after 0:02:01

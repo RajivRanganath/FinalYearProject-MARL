@@ -1,0 +1,109 @@
+{
+  "artifacts": [],
+  "command": "my_main",
+  "experiment": {
+    "base_dir": "/Users/rajiv/Desktop/FinalYearProject-MARL/training/epymarl/src",
+    "dependencies": [
+      "numpy==2.5.2",
+      "pyyaml==5.3.1",
+      "sacred==0.8.7",
+      "torch==2.13.0"
+    ],
+    "mainfile": "main.py",
+    "name": "pymarl",
+    "repositories": [
+      {
+        "commit": "06b8ff9ea01de9df1238565ad29d7877e3e9903d",
+        "dirty": true,
+        "url": "git@github.com:RajivRanganath/FinalYearProject-MARL.git"
+      },
+      {
+        "commit": "06b8ff9ea01de9df1238565ad29d7877e3e9903d",
+        "dirty": true,
+        "url": "git@github.com:RajivRanganath/FinalYearProject-MARL.git"
+      },
+      {
+        "commit": "06b8ff9ea01de9df1238565ad29d7877e3e9903d",
+        "dirty": true,
+        "url": "git@github.com:RajivRanganath/FinalYearProject-MARL.git"
+      }
+    ],
+    "sources": [
+      [
+        "main.py",
+        "_sources/main_754e3e09e8f78daf878b90824fef8fe3.py"
+      ],
+      [
+        "run.py",
+        "_sources/run_29fd448eb2929a57e5fd2547c431175b.py"
+      ],
+      [
+        "utils/logging.py",
+        "_sources/logging_80685d67fab61f6e71e93fbe28085531.py"
+      ]
+    ]
+  },
+  "fail_trace": [
+    "Traceback (most recent call last):\n",
+    "  File \"/Users/rajiv/Desktop/FinalYearProject-MARL/venv/lib/python3.12/site-packages/sacred/config/captured_function.py\", line 42, in captured_function\n    result = wrapped(*args, **kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^\n",
+    "  File \"/Users/rajiv/Desktop/FinalYearProject-MARL/training/epymarl/src/main.py\", line 45, in my_main\n    run(_run, config, _log)\n",
+    "  File \"/Users/rajiv/Desktop/FinalYearProject-MARL/training/epymarl/src/run.py\", line 67, in run\n    run_sequential(args=args, logger=logger)\n",
+    "  File \"/Users/rajiv/Desktop/FinalYearProject-MARL/training/epymarl/src/run.py\", line 200, in run_sequential\n    episode_batch = runner.run(test_mode=False)\n                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n",
+    "  File \"/Users/rajiv/Desktop/FinalYearProject-MARL/training/epymarl/src/runners/episode_runner.py\", line 93, in run\n    _, reward, terminated, truncated, env_info = self.env.step(actions[0])\n                                                 ^^^^^^^^^^^^^^^^^^^^^^^^^\n",
+    "  File \"/Users/rajiv/Desktop/FinalYearProject-MARL/training/env_wrapper.py\", line 114, in step\n    for agent_id, sa_env in self.env.agents.items():\n                            ^^^^^^^^^^^^^^^^^^^^^\n",
+    "AttributeError: 'list' object has no attribute 'items'\n"
+  ],
+  "heartbeat": "2026-08-13T10:47:38.239706",
+  "host": {
+    "ENV": {},
+    "cpu": "Apple M4",
+    "hostname": "Rajivs-MacBook-Air.local",
+    "os": [
+      "Darwin",
+      "macOS-15.7.7-arm64-arm-64bit"
+    ],
+    "python_version": "3.12.13"
+  },
+  "meta": {
+    "command": "my_main",
+    "config_updates": {
+      "save_model": true,
+      "save_model_interval": 25000
+    },
+    "named_configs": [],
+    "options": {
+      "--beat-interval": null,
+      "--capture": null,
+      "--comment": null,
+      "--debug": false,
+      "--enforce_clean": false,
+      "--file_storage": null,
+      "--force": false,
+      "--help": false,
+      "--id": null,
+      "--loglevel": null,
+      "--mongo_db": null,
+      "--name": null,
+      "--pdb": false,
+      "--print-config": false,
+      "--priority": null,
+      "--queue": false,
+      "--s3": null,
+      "--sql": null,
+      "--tiny_db": null,
+      "--unobserved": false,
+      "COMMAND": null,
+      "UPDATE": [
+        "save_model=True",
+        "save_model_interval=25000"
+      ],
+      "help": false,
+      "with": true
+    }
+  },
+  "resources": [],
+  "result": null,
+  "start_time": "2026-08-13T10:47:37.833436",
+  "status": "FAILED",
+  "stop_time": "2026-08-13T10:47:38.240179"
+}

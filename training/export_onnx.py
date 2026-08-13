@@ -25,8 +25,8 @@ def export_to_onnx(checkpoint_dir, output_path):
     # We construct the args namespace to initialize RNNAgent
     # Default EPyMARL settings for our env:
     args = SimpleNamespace(
-        hidden_dim=64, # Default hidden_dim in EPyMARL
-        rnn_hidden_dim=64,
+        hidden_dim=128, # IQL uses 128
+        rnn_hidden_dim=128,
         n_actions=2,       # Sleep or Sample
         use_rnn=False,     # Based on EPyMARL defaults for MLP
     )

@@ -11,3 +11,7 @@ env/
 .venv/
 env.bak/
 venv.bak/
+
+# Training artifacts & sacred results
+results/
+training/epymarl/results/

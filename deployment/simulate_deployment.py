@@ -68,6 +68,7 @@ class ONNXPolicy:
         self.session = ort.InferenceSession(str(onnx_path))
         self.n_agents = n_agents
         self.hidden_dim = hidden_dim
+        self.act1_count = 0
 
     def select_action(self, agent_id, obs, step_count=None, info=None):
         agent_idx = int(agent_id.split('_')[1])
@@ -86,10 +87,6 @@ class ONNXPolicy:
         })
         q_values = outputs[0][0]
         
-        # DEBUG: Print first few Q-values for agent_0
-        if step_count is not None and step_count <= 5 and agent_id == "agent_0":
-            print(f"  [DEBUG] Step {step_count} {agent_id}: obs={full_obs[0].round(3)} -> q_values={q_values.round(3)} -> act={np.argmax(q_values)}")
-
         return int(np.argmax(q_values))
 
 

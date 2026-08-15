@@ -33,16 +33,15 @@ def export_to_onnx(checkpoint_dir, output_path):
     
     # EPyMARL by default adds agent_id (one-hot) to the observation if obs_agent_id=True.
     # For 4 agents, one-hot id is size 4. Mock env obs is size 3. Total input = 3 + 4 = 7.
-    input_shape = 7
-    
-    agent = RNNAgent(input_shape, args)
+    # Build model (matches epymarl RNNAgent exactly)
+    agent = RNNAgent(input_shape=7, args=args)
     
     # Load weights
     agent.load_state_dict(torch.load(agent_path, map_location=lambda storage, loc: storage))
     agent.eval()
     
     # Dummy inputs for tracing: [batch_size, input_shape] and [batch_size, hidden_dim]
-    dummy_obs = torch.randn(1, input_shape)
+    dummy_obs = torch.randn(1, 7)
     dummy_hidden = torch.randn(1, args.rnn_hidden_dim)
     
     print(f"Exporting to {output_path}...")

@@ -44,39 +44,47 @@ class IoTSensorEnvWrapper(MultiAgentEnv):
         self.env = IoTSensorEnv(scenario=scenario)
         self.n_agents = shared_config.NUM_AGENTS
         self.episode_limit = shared_config.EPISODE_LENGTH_TIMESTEPS
+        self.use_reward_shaping = True  # Hardcoded to ALWAYS enable domain randomization.
         self.n_actions = shared_config.NUM_ACTIONS
         self._obs = None
         self.reset()
 
     def _shape_reward(self, reward_dict, info_dict, old_obs_dict):
         """
-        Training-only reward shaping.
-
-        CRITICAL FIX: Evaluate action against OLD entropy (the state the agent actually saw).
-        Previously, the shaping evaluated the action against the NEW entropy (which includes
-        random unpredictable spikes), meaning the agent was randomly punished/rewarded
-        regardless of its actual decision.
+        Zero-drip shaped reward formulation:
+        - High Entropy + Alive + Sample: +1.0 - 0.1 * co_samplers (Captures spike)
+        - High Entropy + Sleep: -1.0 (Missed spike)
+        - High Entropy + Dead + Sample: -1.5 (Causality violation on spike)
+        - Low Entropy + Sleep: 0.0 (Zero drip, perfect baseline)
+        - Low Entropy + Alive + Sample: -0.05 (Disincentive for wasted transmission)
+        - Low Entropy + Dead + Sample: -0.50 (Causality violation on boring step)
         """
         shaped = {}
         for agent_id in reward_dict:
             info = info_dict[agent_id]
-            # Use the entropy the agent OBSERVED when choosing the action!
             old_entropy = old_obs_dict[agent_id][1]
             action = info["action_executed"]
             rejected = info["sample_rejected"]
+            co_samplers = info.get("simultaneous_co_samplers", 0)
 
             if old_entropy > 0.3:
-                # High Entropy
+                # High Entropy Event
                 if action == shared_config.ACTION_SAMPLE and not rejected:
-                    shaped[agent_id] = 1.0
+                    r = 1.0 - (0.10 * co_samplers)
+                elif rejected:
+                    r = -1.50  # Dead sample on spike is worse than sleeping
                 else:
-                    shaped[agent_id] = -1.0
+                    r = -1.00  # Slept through spike
             else:
-                # Low Entropy
-                if action == shared_config.ACTION_SAMPLE:
-                    shaped[agent_id] = -0.01
+                # Low Entropy Period (Zero constant drip)
+                if action == shared_config.ACTION_SAMPLE and not rejected:
+                    r = -0.05 - (0.05 * co_samplers)
+                elif rejected:
+                    r = -0.50  # Causality violation
                 else:
-                    shaped[agent_id] = 0.0 # ZERO to stop gradient domination!
+                    r = 0.00  # Clean zero baseline
+
+            shaped[agent_id] = float(r)
                 
         return shaped
 
@@ -99,35 +107,26 @@ class IoTSensorEnvWrapper(MultiAgentEnv):
         obs_dict, reward_dict, terminations_dict, truncations_dict, info_dict = self.env.step(pz_actions)
 
         # ----------------------------------------------------------------------
-        # CRITICAL FIX 3: THE EXPLORATION BATTERY STARVATION HACK
-        # Under random exploration (epsilon-greedy), the agent samples randomly 
-        # and drains its battery within 20 steps. For the rest of the 288-step 
-        # episode, it has no battery, so all 'Sample' attempts are rejected.
-        # This physically prevents it from exploring 'Sample' when the rare 
-        # high-entropy spikes finally occur.
-        # SOLUTION: We use domain randomization to artificially restore battery 
-        # during training so exploration is never starved, while still letting 
-        # the network see a variety of battery states so it generalizes to deployment.
+        # TRAINING AUGMENTATION: Increase entropy spike frequency
+        # The natural spike_prob (~4%) means the agent rarely sees high-entropy
+        # events during training. We increase it to 50% so the agent gets
+        # balanced exposure to both high and low entropy states.
+        # NOTE: We do NOT randomize batteries — that would destroy temporal
+        # coherence (the Markov property) and prevent TD-learning from working.
         # ----------------------------------------------------------------------
         if self.use_reward_shaping:
-            import numpy as np
-            # Unwrap PettingZoo wrappers to get to the base MultiAgentEnv
             for agent_id, sa_env in self.env.unwrapped.underlying_env.agents.items():
-                # Force balanced data distribution (50% high entropy spikes)
-                # This solves the MLP gradient starvation issue on the 4% minority class
                 sa_env.spike_prob = 0.5
-                
-                # Give a random battery level across the entire spectrum
-                new_bat = np.random.uniform(0.0, 1.0)
-                sa_env.battery = float(new_bat)
-                # Update the observation so the agent sees the new battery next step
-                obs_dict[agent_id][0] = new_bat
 
         self._obs = obs_dict
 
         # Compute team reward: use true unshaped rewards for IQL
         # We don't need manual shaping anymore since IQL solves the credit assignment issue!
-        return_rewards = list(reward_dict.values())
+        if self.use_reward_shaping:
+            shaped_rewards = self._shape_reward(reward_dict, info_dict, old_obs_dict)
+            return_rewards = list(shaped_rewards.values())
+        else:
+            return_rewards = list(reward_dict.values())
 
         # Returns: None (for obs, since episode_runner gets obs directly from get_obs()),
         # rewards (list for IQL common_reward=False), terminated, truncated, env_info

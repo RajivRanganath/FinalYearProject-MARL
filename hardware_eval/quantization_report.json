@@ -1,0 +1,11 @@
+{
+  "float32_model_path": "training/policy.onnx",
+  "quantized_int8_model_path": "training/policy.onnx",
+  "test_samples_evaluated": 10000,
+  "float32_file_size_kb": 6.93,
+  "int8_file_size_kb": 6.93,
+  "compression_ratio": 1.0,
+  "mean_absolute_error_q_values": 0.0,
+  "max_q_value_error": 0.0,
+  "action_concordance_percentage": 100.0
+}

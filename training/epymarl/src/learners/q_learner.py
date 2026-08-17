@@ -61,7 +61,7 @@ class QLearner:
             self.rew_ms.update(rewards)
             rewards = (rewards - self.rew_ms.mean) / th.sqrt(self.rew_ms.var)
 
-        if self.args.common_reward:
+        if self.args.common_reward and self.mixer is None:
             assert (
                 rewards.size(2) == 1
             ), "Expected singular agent dimension for common rewards"

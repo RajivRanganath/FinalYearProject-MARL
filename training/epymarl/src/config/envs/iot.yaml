@@ -1,6 +1,7 @@
 env: "iot"
 
 env_args:
+  scenario: "volatile"
   map_name: "mock"
 
 test_greedy: True
@@ -10,3 +11,5 @@ log_interval: 5000
 runner_log_interval: 5000
 learner_log_interval: 5000
 t_max: 200000
+gamma: 0.85
+

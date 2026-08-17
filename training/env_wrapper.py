@@ -1,24 +1,19 @@
 """
-EPyMARL Environment Wrapper for IoTSensorEnv
+EPyMARL MultiAgentEnv Wrapper for IoTSensorEnv
+MARL Adaptive IoT Sampling Project
 
-Wraps Module A's PettingZoo environment into EPyMARL's MultiAgentEnv interface.
-Includes optional reward shaping for training that breaks the degenerate always-sleep
-optimum without modifying Module A's environment code.
-
-REWARD SHAPING RATIONALE:
-The original reward function has a degenerate optimum: always-sleeping yields
-+0.05 * 276 low-entropy steps - 0.80 * 12 high-entropy misses = +4.2 per agent,
-which is positive and higher than most exploratory strategies. Q-learning converges
-to this trivially. The shaped rewards remove the constant +0.05 drip and amplify
-high-entropy events so the agent must actually capture events to earn positive reward.
-At deployment time, the model is evaluated against the ORIGINAL unshaped rewards.
+Standardizes the PettingZoo IoTSensorEnv into EPyMARL's MultiAgentEnv interface:
+- Strict Action Feasibility Masking: Disables ACTION_SAMPLE when battery is below sampling cost
+- Canonical Reward Propagation: Optimizes the true environment objective without divergent surrogate hacks
+- Global State Construction for CTDE: Formulates 12-dimensional centralized state vector
 """
 
 import sys
 import numpy as np
 from pathlib import Path
+from typing import List, Tuple, Dict, Any, Optional
 
-# Cross-platform path setup (Rule 1 compliance)
+# Cross-platform path setup
 _THIS_DIR = Path(__file__).resolve().parent
 _EPYMARL_SRC = _THIS_DIR / "epymarl" / "src"
 _PROJECT_ROOT = _THIS_DIR.parent
@@ -27,153 +22,96 @@ for p in [str(_THIS_DIR), str(_EPYMARL_SRC), str(_PROJECT_ROOT)]:
     if p not in sys.path:
         sys.path.append(p)
 
+import shared_config
 from environment.pettingzoo_env import IoTSensorEnv
 from envs.multiagentenv import MultiAgentEnv
-import shared_config
 
 class IoTSensorEnvWrapper(MultiAgentEnv):
+    """
+    EPyMARL MultiAgentEnv implementation wrapping IoTSensorEnv.
+    """
+
     def __init__(self, **kwargs):
-        """
-        Args:
-            scenario: "stable" or "volatile" (from shared_config.SCENARIOS)
-            use_reward_shaping: If True, apply training reward shaping that breaks
-                                the degenerate always-sleep optimum. Default True.
-        """
         scenario = kwargs.get("scenario", "stable")
-        self.use_reward_shaping = kwargs.get("use_reward_shaping", True)
-        self.env = IoTSensorEnv(scenario=scenario)
+        seed = kwargs.get("seed", shared_config.SEED)
+        
+        self.env = IoTSensorEnv(scenario=scenario, seed=seed)
         self.n_agents = shared_config.NUM_AGENTS
-        self.episode_limit = shared_config.EPISODE_LENGTH_TIMESTEPS
-        self.use_reward_shaping = True  # Hardcoded to ALWAYS enable domain randomization.
         self.n_actions = shared_config.NUM_ACTIONS
-        self._obs = None
-        self.reset()
+        self.episode_limit = shared_config.EPISODE_LENGTH_TIMESTEPS
+        self._obs: Dict[str, np.ndarray] = {}
+        self._avail_actions: Dict[str, np.ndarray] = {}
+        self.reset(seed=seed)
 
-    def _shape_reward(self, reward_dict, info_dict, old_obs_dict):
+    def step(self, actions: List[int]) -> Tuple[float, bool, Dict[str, Any]]:
         """
-        Zero-drip shaped reward formulation:
-        - High Entropy + Alive + Sample: +1.0 - 0.1 * co_samplers (Captures spike)
-        - High Entropy + Sleep: -1.0 (Missed spike)
-        - High Entropy + Dead + Sample: -1.5 (Causality violation on spike)
-        - Low Entropy + Sleep: 0.0 (Zero drip, perfect baseline)
-        - Low Entropy + Alive + Sample: -0.05 (Disincentive for wasted transmission)
-        - Low Entropy + Dead + Sample: -0.50 (Causality violation on boring step)
-        """
-        shaped = {}
-        for agent_id in reward_dict:
-            info = info_dict[agent_id]
-            old_entropy = old_obs_dict[agent_id][1]
-            action = info["action_executed"]
-            rejected = info["sample_rejected"]
-            co_samplers = info.get("simultaneous_co_samplers", 0)
-
-            if old_entropy > 0.3:
-                # High Entropy Event
-                if action == shared_config.ACTION_SAMPLE and not rejected:
-                    r = 1.0 - (0.10 * co_samplers)
-                elif rejected:
-                    r = -1.50  # Dead sample on spike is worse than sleeping
-                else:
-                    r = -1.00  # Slept through spike
-            else:
-                # Low Entropy Period (Zero constant drip)
-                if action == shared_config.ACTION_SAMPLE and not rejected:
-                    r = -0.05 - (0.05 * co_samplers)
-                elif rejected:
-                    r = -0.50  # Causality violation
-                else:
-                    r = 0.00  # Clean zero baseline
-
-            shaped[agent_id] = float(r)
-                
-        return shaped
-
-    def step(self, actions):
-        """
-        Execute one joint step for all agents.
-
+        Executes one joint step across all agents.
         Args:
-            actions: list or array of size n_agents (ints: 0=sleep, 1=sample)
-
+            actions: List of integer actions of length n_agents.
         Returns:
-            Tuple of (None, team_reward, terminated, truncated, env_info)
-            matching EPyMARL's episode_runner expected interface.
+            team_reward, terminated, env_info
         """
         pz_actions = {f"agent_{i}": int(actions[i]) for i in range(self.n_agents)}
-        
-        # Save the old observation to evaluate the agent's action fairly
-        old_obs_dict = self._obs if self._obs is not None else {f"agent_{i}": np.zeros(3) for i in range(self.n_agents)}
-        
-        obs_dict, reward_dict, terminations_dict, truncations_dict, info_dict = self.env.step(pz_actions)
-
-        # ----------------------------------------------------------------------
-        # TRAINING AUGMENTATION: Increase entropy spike frequency
-        # The natural spike_prob (~4%) means the agent rarely sees high-entropy
-        # events during training. We increase it to 50% so the agent gets
-        # balanced exposure to both high and low entropy states.
-        # NOTE: We do NOT randomize batteries — that would destroy temporal
-        # coherence (the Markov property) and prevent TD-learning from working.
-        # ----------------------------------------------------------------------
-        if self.use_reward_shaping:
-            for agent_id, sa_env in self.env.unwrapped.underlying_env.agents.items():
-                sa_env.spike_prob = 0.5
-
+        obs_dict, reward_dict, terms, truncs, info_dict = self.env.step(pz_actions)
         self._obs = obs_dict
+        self._avail_actions = self.env.get_avail_actions()
+        team_reward = float(sum(reward_dict.values()))
+        terminated = all(terms.values()) or all(truncs.values())
+        env_info = {"episode_limit": self.episode_limit}
 
-        # Compute team reward: use true unshaped rewards for IQL
-        # We don't need manual shaping anymore since IQL solves the credit assignment issue!
-        if self.use_reward_shaping:
-            shaped_rewards = self._shape_reward(reward_dict, info_dict, old_obs_dict)
-            return_rewards = list(shaped_rewards.values())
-        else:
-            return_rewards = list(reward_dict.values())
+        # Returns: None (for obs), team_reward, terminated, truncated (False), env_info
+        return None, team_reward, terminated, False, env_info
 
-        # Returns: None (for obs, since episode_runner gets obs directly from get_obs()),
-        # rewards (list for IQL common_reward=False), terminated, truncated, env_info
-        return None, return_rewards, all(terminations_dict.values()), all(truncations_dict.values()), {"episode_limit": self.episode_limit}
-
-    def get_obs(self):
+    def get_obs(self) -> List[np.ndarray]:
+        """Returns list of 3D local observations for each agent."""
         return [self._obs[f"agent_{i}"] for i in range(self.n_agents)]
 
-    def get_obs_agent(self, agent_id):
+    def get_obs_agent(self, agent_id: int) -> np.ndarray:
+        """Returns 3D local observation for specified agent index."""
         return self._obs[f"agent_{agent_id}"]
 
-    def get_obs_size(self):
-        return shared_config.STATE_DIM
+    def get_obs_size(self) -> int:
+        """Returns size of local observation vector (3)."""
+        return shared_config.ENV_OBS_DIM
 
-    def get_state(self):
-        # Global state. For CTDE, we concatenate local observations.
+    def get_state(self) -> np.ndarray:
+        """Returns global centralized state vector (12 floats)."""
         return np.concatenate(self.get_obs())
 
-    def get_state_size(self):
-        return shared_config.STATE_DIM * self.n_agents
+    def get_state_size(self) -> int:
+        """Returns size of global centralized state vector (12)."""
+        return shared_config.GLOBAL_STATE_DIM
 
-    def get_avail_actions(self):
+    def get_avail_actions(self) -> List[List[int]]:
+        """Returns action availability mask list for all agents."""
         return [self.get_avail_agent_actions(i) for i in range(self.n_agents)]
 
-    def get_avail_agent_actions(self, agent_id):
-        # All actions available
-        return [1] * self.n_actions
+    def get_avail_agent_actions(self, agent_id: int) -> List[int]:
+        """
+        Returns action mask [can_sleep, can_sample] for agent_id.
+        Enforces energy feasibility: sample is 0 when battery < cost.
+        """
+        aid = f"agent_{agent_id}"
+        if aid in self._avail_actions:
+            return list(self._avail_actions[aid])
+        return [1, 1]
 
-    def get_total_actions(self):
+    def get_total_actions(self) -> int:
+        """Returns total discrete actions (2)."""
         return self.n_actions
 
-    def reset(self, seed=None, options=None):
-        obs_dict, _ = self.env.reset(seed=seed)
+    def reset(self, seed: Optional[int] = None, options: Optional[dict] = None) -> Tuple[List[np.ndarray], np.ndarray]:
+        """Resets environment and returns initial observations and global state."""
+        obs_dict, infos = self.env.reset(seed=seed)
         self._obs = obs_dict
+        self._avail_actions = self.env.get_avail_actions()
         return self.get_obs(), self.get_state()
 
     def render(self):
-        pass
+        self.env.render()
 
     def close(self):
         self.env.close()
 
-    def seed(self, seed=None):
+    def seed(self, seed: Optional[int] = None):
         self.env.reset(seed=seed)
-
-    def save_replay(self):
-        pass
-
-    def get_stats(self):
-        return {}

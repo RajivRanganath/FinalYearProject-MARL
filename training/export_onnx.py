@@ -1,68 +1,119 @@
-import torch
-import sys
+"""
+ONNX Export Engine for MARL Policy
+MARL Adaptive IoT Sampling & TinyML Hardware Evaluation
+
+Exports individual agent policy networks from trained EPyMARL PyTorch checkpoints
+into standard ONNX format for deployment and microcontroller hardware profiling.
+"""
+
 import os
-
-# Ensure epymarl source is in path
-sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "epymarl", "src"))
-from modules.agents.rnn_agent import RNNAgent
+import sys
+import torch
+import onnx
+import onnxruntime as ort
+import numpy as np
+from pathlib import Path
 from types import SimpleNamespace
+from typing import Dict, Any
 
-def export_to_onnx(checkpoint_dir, output_path):
+# Cross-platform path setup
+ROOT_DIR = Path(__file__).resolve().parent.parent
+EPYMARL_SRC = Path(__file__).resolve().parent / "epymarl" / "src"
+
+for p in [str(ROOT_DIR), str(EPYMARL_SRC)]:
+    if p not in sys.path:
+        sys.path.append(p)
+
+import shared_config
+from modules.agents.rnn_agent import RNNAgent
+
+def export_agent_to_onnx(
+    checkpoint_path: str,
+    output_onnx_path: str = "training/policy.onnx",
+    hidden_dim: int = shared_config.HIDDEN_DIM
+) -> Dict[str, Any]:
     """
-    Exports the trained individual agent policy (the RNN network) to ONNX format.
-    Module C relies on this file to evaluate hardware performance.
+    Loads agent.th weights from checkpoint and exports to ONNX.
     """
-    print(f"Loading model from {checkpoint_dir}...")
-    
-    # In EPyMARL, models are saved in the checkpoint_dir (e.g., results/models/vdn_.../1/)
-    # The agent network is typically named agent.th
-    agent_path = os.path.join(checkpoint_dir, "agent.th")
-    
-    if not os.path.exists(agent_path):
-        print(f"Error: Could not find agent.th in {checkpoint_dir}")
-        sys.exit(1)
-        
-    # We construct the args namespace to initialize RNNAgent
-    # Default EPyMARL settings for our env:
+    ckpt_file = Path(checkpoint_path)
+    if ckpt_file.is_dir():
+        ckpt_file = ckpt_file / "agent.th"
+
+    if not ckpt_file.exists():
+        raise FileNotFoundError(f"Checkpoint agent weights not found at {ckpt_file}")
+
+    state_dict = torch.load(str(ckpt_file), map_location="cpu")
+    detected_hidden_dim = state_dict["fc1.weight"].shape[0] if "fc1.weight" in state_dict else hidden_dim
+
     args = SimpleNamespace(
-        hidden_dim=128, # IQL uses 128
-        rnn_hidden_dim=128,
-        n_actions=2,       # Sleep or Sample
-        use_rnn=False,     # Based on EPyMARL defaults for MLP
+        hidden_dim=detected_hidden_dim,
+        rnn_hidden_dim=detected_hidden_dim,
+        n_actions=shared_config.NUM_ACTIONS,
+        use_rnn=False
     )
-    
-    # EPyMARL by default adds agent_id (one-hot) to the observation if obs_agent_id=True.
-    # For 4 agents, one-hot id is size 4. Mock env obs is size 3. Total input = 3 + 4 = 7.
-    # Build model (matches epymarl RNNAgent exactly)
-    agent = RNNAgent(input_shape=7, args=args)
-    
-    # Load weights
-    agent.load_state_dict(torch.load(agent_path, map_location=lambda storage, loc: storage))
+
+    # Input shape: 3 (local obs) + 4 (one-hot agent ID) = 7
+    input_shape = shared_config.MODEL_INPUT_DIM
+    agent = RNNAgent(input_shape=input_shape, args=args)
+    agent.load_state_dict(state_dict)
     agent.eval()
-    
-    # Dummy inputs for tracing: [batch_size, input_shape] and [batch_size, hidden_dim]
-    dummy_obs = torch.randn(1, 7)
-    dummy_hidden = torch.randn(1, args.rnn_hidden_dim)
-    
-    print(f"Exporting to {output_path}...")
+
+    dummy_obs = torch.zeros((1, input_shape), dtype=torch.float32)
+    dummy_hidden = torch.zeros((1, detected_hidden_dim), dtype=torch.float32)
+
+    out_file = Path(output_onnx_path)
+    out_file.parent.mkdir(parents=True, exist_ok=True)
+
+    print(f"Exporting PyTorch model ({ckpt_file}) to ONNX ({out_file})...")
+
     torch.onnx.export(
         agent,
         (dummy_obs, dummy_hidden),
-        output_path,
+        str(out_file),
         export_params=True,
-        opset_version=11,
+        opset_version=18,
         do_constant_folding=True,
         input_names=['obs', 'hidden_state_in'],
         output_names=['q_values', 'hidden_state_out'],
-        dynamic_axes={'obs': {0: 'batch_size'}, 'hidden_state_in': {0: 'batch_size'}}
+        dynamic_axes={
+            'obs': {0: 'batch_size'},
+            'hidden_state_in': {0: 'batch_size'}
+        }
     )
-    
-    print(f"Successfully exported ONNX model to {output_path}")
-    print("Module C can now use this file for hardware profiling.")
+
+    # Verify exported ONNX model
+    onnx_model = onnx.load(str(out_file))
+    onnx.checker.check_model(onnx_model)
+
+    # Test inference with ONNX Runtime
+    session = ort.InferenceSession(str(out_file))
+    test_out = session.run(None, {
+        'obs': dummy_obs.numpy(),
+        'hidden_state_in': dummy_hidden.numpy()
+    })
+    q_vals = test_out[0]
+
+    param_count = sum(p.numel() for p in agent.parameters())
+    file_size_kb = out_file.stat().st_size / 1024.0
+
+    metadata = {
+        "checkpoint_source": str(ckpt_file),
+        "output_onnx_path": str(out_file),
+        "input_dim": input_shape,
+        "hidden_dim": hidden_dim,
+        "output_dim": shared_config.NUM_ACTIONS,
+        "total_parameters": param_count,
+        "file_size_kb": round(file_size_kb, 2),
+        "verification_status": "PASSED"
+    }
+
+    print(f"Export Successful! Parameter count: {param_count}, File size: {file_size_kb:.2f} KB")
+    return metadata
 
 if __name__ == "__main__":
-    if len(sys.argv) < 3:
-        print("Usage: python export_onnx.py <checkpoint_dir_containing_agent.th> <output_onnx_path>")
-        sys.exit(1)
-    
-    export_to_onnx(sys.argv[1], sys.argv[2])
+    if len(sys.argv) > 1:
+        ckpt = sys.argv[1]
+        out = sys.argv[2] if len(sys.argv) > 2 else "training/policy.onnx"
+        export_agent_to_onnx(ckpt, out)
+    else:
+        print("Usage: python export_onnx.py <path_to_agent.th_or_dir> [output_onnx_path]")

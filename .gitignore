@@ -12,6 +12,9 @@ env/
 env.bak/
 venv.bak/
 
-# Training artifacts & sacred results
-results/
+# Training artifacts & sacred raw logs
+results/models/
+results/sacred/
+results/training/
 training/epymarl/results/
+

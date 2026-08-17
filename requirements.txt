@@ -1,15 +1,22 @@
-# Core Dependencies
-numpy
-pandas
+# Core Scientific Stack
+numpy>=1.26.0,<3.0.0
+scipy>=1.12.0
+pandas>=2.1.0
+matplotlib>=3.8.0
+seaborn>=0.13.0
 
-# Multi-Agent RL & Environments
-gymnasium>=0.28.0
+# Multi-Agent Reinforcement Learning & Environments
+gymnasium>=0.28.0,<2.0.0
 pettingzoo==1.24.3
-supersuit
+SuperSuit>=3.9.0
 
-# EPyMARL / PyMARL2 dependencies (standard PyTorch for cross-platform support)
-torch
+# PyTorch Deep Learning
+torch>=2.2.0
 
-# Model Export & Inference
-onnx
-onnxruntime
+# TinyML, ONNX Export & Profiling
+onnx>=1.15.0
+onnxruntime>=1.17.0
+
+# Testing & Reproducibility
+pytest>=8.0.0
+PyYAML>=5.3.1

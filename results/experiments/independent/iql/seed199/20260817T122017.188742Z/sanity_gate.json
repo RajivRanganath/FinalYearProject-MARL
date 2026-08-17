@@ -1,0 +1,117 @@
+{
+  "schema_version": 1,
+  "created_at_utc": "2026-08-17T12:20:17.188543+00:00",
+  "scenario": "volatile",
+  "regime": "independent",
+  "config_digest": "7c0bec2f79ae2307",
+  "all_passed": true,
+  "checks": [
+    {
+      "name": "forced_action_and_controlled_reward",
+      "passed": true,
+      "evidence": {
+        "event_sample": 1.9,
+        "event_sleep": -1.5,
+        "non_event_sample": -0.101,
+        "non_event_sleep": 0.0,
+        "sample_executed": true
+      }
+    },
+    {
+      "name": "reward_component_scale",
+      "passed": true,
+      "evidence": {
+        "components": {
+          "capture": 2.0,
+          "miss": 0.0,
+          "sample_energy": -0.1,
+          "aoi": -0.0,
+          "rejection": 0.0
+        },
+        "max_abs_component": 2.0
+      }
+    },
+    {
+      "name": "entropy_event_causality",
+      "passed": true,
+      "evidence": {
+        "predecision_proxy": 0.25,
+        "sleep_measurement": null,
+        "sample_measurement": 0.95
+      }
+    },
+    {
+      "name": "tiny_environment_overfit",
+      "passed": true,
+      "evidence": {
+        "q_values": [
+          [
+            0.0,
+            -0.1
+          ],
+          [
+            -1.5,
+            2.0
+          ]
+        ],
+        "greedy_actions": [
+          0,
+          1
+        ],
+        "action_visits": [
+          [
+            408,
+            92
+          ],
+          [
+            89,
+            411
+          ]
+        ]
+      }
+    },
+    {
+      "name": "single_agent_learning",
+      "passed": true,
+      "evidence": {
+        "learned_return_mean": 36.458699999999986,
+        "always_sleep_return_mean": -94.42499999999949,
+        "sample_fraction_mean": 0.22291666666666665,
+        "training_action_visits": [
+          56422,
+          29978
+        ]
+      }
+    },
+    {
+      "name": "training_evaluation_contract_match",
+      "passed": true,
+      "evidence": {
+        "scenario": "volatile",
+        "regime": "independent",
+        "obs_dim": 5,
+        "state_dim": 20,
+        "config_digest": "7c0bec2f79ae2307"
+      }
+    },
+    {
+      "name": "exploration_both_actions",
+      "passed": true,
+      "evidence": {
+        "epsilon": 0.5,
+        "action_counts": [
+          730,
+          270
+        ]
+      }
+    },
+    {
+      "name": "deterministic_reproducibility",
+      "passed": true,
+      "evidence": {
+        "steps_compared": 12,
+        "seed": 44
+      }
+    }
+  ]
+}

@@ -1,73 +1,67 @@
-# Engineering & Scientific Limitations
+# Engineering and Scientific Limitations
 
-This document provides a transparent, defensible scientific disclosure of the assumptions, boundary conditions, and limitations of the MARL-driven IoT energy-harvesting and TinyML evaluation framework developed in this project.
+These boundaries apply to the final independent/coordinated volatile-scenario study. They are part of the result, not caveats to hide after reporting it.
 
----
+## Scope of the empirical claim
 
-## 1. Physical Energy Harvesting & Battery Dynamics
+The experiments cover four agents, one ring topology, one 24-hour volatile scenario, three independent training seeds per algorithm, and 30 held-out simulation seeds. They do not establish that QMIX is generally inferior to heuristics, nor that cooperative MARL cannot help larger or more complex networks. The supported result is narrower: no engineering advantage over the strongest causal proxy heuristic was observed under the evaluated conditions.
 
-### 1.1 Linear vs. Electrochemical Battery Dynamics
-* **Assumption Made**: Residual battery energy is tracked via linear state-of-charge (SoC) integration ($E_{t+1} = \min(C_{max}, E_t - E_{cost} + E_{harvest})$) assuming a nominal cell voltage of $3.7\text{ V}$.
-* **Real-World Reality**: Real lithium-ion (Li-ion) and lithium-iron-phosphate ($\text{LiFePO}_4$) cells exhibit non-linear discharge curves, internal equivalent series resistance (ESR), temperature-dependent capacity fade, and Peukert capacity reduction under high transient pulse currents.
-* **Engineering Impact**: During heavy burst sampling, transient voltage sags under high current draw could trigger premature low-voltage cutoffs before mathematical battery exhaustion.
+Only simulation performance is measured. No field sensor network, radio stack, solar installation, or target microcontroller executes the final policy in this study.
 
-### 1.2 Photovoltaic Harvesting Model
-* **Assumption Made**: Solar harvesting follows a semi-diurnal sinusoidal envelope modulated by a first-order autoregressive $\text{AR}(1)$ cloud attenuation factor ($\phi = 0.85, \sigma = 0.15$).
-* **Real-World Reality**: Ambient solar energy is governed by seasonal solar elevation angles, atmospheric optical depth, panel azimuth/tilt, partial shading, and non-linear Maximum Power Point Tracking (MPPT) efficiency curves ($\eta_{MPPT} \approx 85\% - 95\%$).
-* **Engineering Impact**: Static panel assumptions overestimate harvest during heavy overcast days with diffuse multi-angle scattering.
+## Event observability and proxy model
 
-### 1.3 Power Management Integrated Circuit (PMIC) Efficiency
-* **Assumption Made**: Energy transfers between the PV panel, storage capacitor/battery, and MCU rail are modeled with idealized efficiency.
-* **Real-World Reality**: Switching regulators (buck/boost converters) and low-dropout regulators (LDOs) incur quiescent currents ($I_q \approx 1 - 10\ \mu\text{A}$) and conversion efficiencies varying from $60\%$ at micro-power loads to $92\%$ at peak currents.
+True measurement entropy is latent before the decision and is measured only after SAMPLE. Policies instead receive a noisy low-power event proxy. Its false-positive rate, false-negative rate, noise level, and monitoring cost are modeling assumptions rather than values calibrated from a named physical sensor. Results may change materially with a weaker, delayed, drifting, or more expensive detector.
 
----
+The benchmark name `Entropy Threshold` is retained to match the requested comparison list, but the implementation thresholds this causal event proxy. It must not be described as a threshold on pre-observed latent entropy.
 
-## 2. Wireless Communication & Sensor Network Dynamics
+## Network and communication model
 
-### 2.1 Communication Channel & MAC Layer
-* **Assumption Made**: Neighborhood communication operates over a spatial 1-hop ring topology where each sensor instantaneously receives neighbor sampling rate indicators without packet loss.
-* **Real-World Reality**: In real Low-Power Wireless Personal Area Networks (LPWAN / IEEE 802.15.4 / BLE Mesh / LoRaWAN), transmissions are subject to path loss, shadow fading, multipath interference, packet collisions, and CSMA/CA backoff latency.
-* **Engineering Impact**: Packet dropouts or transmission collisions could cause delayed or stale neighbor state awareness, potentially increasing momentary spatial co-sampling redundancy.
+The coordinated regime uses a two-packet shared channel with deterministic rotating priority, a ring neighborhood, lagged neighbor sampling rates, persistent spatially correlated events, redundancy costs, and coverage utility. It omits path loss, fading, capture effects, retransmission, CSMA/CA backoff, queueing, packet corruption, clock drift, and explicit neighbor-message energy. Neighbor activity is received without loss or delay beyond the defined lag.
 
-### 2.2 Discrete Time Discretization
-* **Assumption Made**: The environment operates in discrete 5-minute timesteps ($T = 288$ steps per 24-hour diurnal cycle).
-* **Real-World Reality**: Environmental physical phenomena (e.g., flash floods, seismic tremors, acoustic bursts) occur continuously on sub-second or millisecond scales.
-* **Engineering Impact**: The system acts as a macro-scale duty-cycle manager. Sub-second transient detection must be handled by low-power hardware wake-up interrupts on the edge sensor board rather than MARL discrete step scheduling.
+The channel, redundancy, and coverage mechanisms create genuine joint dependence, but the four-agent task remains small and may be solvable by a well-aligned local rule. More complex coordination should be a new pre-registered experiment rather than a post-hoc mechanism added to make MARL win.
 
----
+## Energy and sensing model
 
-## 3. TinyML Hardware Profiling & Microcontroller Deployment
+Battery state uses linear state-of-charge integration and nominal voltage. It omits nonlinear discharge curves, internal resistance, temperature effects, aging, leakage variation, and voltage sag under burst current.
 
-### 3.1 Profiling Methodology (Analytical vs. Silicon Execution)
-* **Distinction**:
-  * **Measured**: Parameter count, ONNX tensor dimensions, FP32 and INT8 binary sizes, and host x86/ARM CPU inference latencies were directly measured via `onnxruntime` and PyTorch runtime profilers.
-  * **Estimated**: Microcontroller cycle latencies and execution energies on candidate edge hardware (ESP32-WROOM-32, Bharat Pi, RP2040, Arduino Nano 33 BLE Sense) were calculated using cycle-accurate MAC operations ($2\times \text{MAC} + \text{Activation Cycles}$) and vendor-published datasheet active power measurements at rated clock frequencies.
-* **Real-World Reality**: On physical target silicon, runtime is affected by memory bus arbitration, cache misses (on ESP32 cache lines), DMA transfer delays, and compiler optimization flags (`-O3`, `-Os`, CMSIS-NN SIMD vectorization).
-* **Engineering Justification**: Hardware profiling adheres strictly to IEEE TinyML benchmarking standards, using authoritative manufacturer datasheets (Espressif Systems, Raspberry Pi Ltd, Nordic Semiconductor).
+Solar harvest uses an idealized time-of-day envelope with stochastic cloud attenuation. It omits seasonal sun geometry, panel orientation, shading, MPPT behavior, conversion loss, and weather data calibration. A time-of-day harvest forecast is available to policies; realized future harvest is not.
 
----
+The environment advances in five-minute steps. Sub-second phenomena would require a separate wake-up interrupt or continuous-time sensing layer.
 
-## 4. Multi-Agent Reinforcement Learning (MARL) Formulations
+The normalized simulation reservoir deliberately accelerates charge/discharge dynamics within a one-day episode: a normalized SAMPLE cost of `0.05` is not a direct conversion of the approximately 14.5 mJ component estimate into a full 500 mAh cell. Consequently, benchmark energy is reported in normalized simulation units and must not be presented as measured joules or battery lifetime.
 
-### 4.1 Scalability to Ultra-Large Swarms ($N > 100$)
-* **Constraint**: The current system is evaluated on a canonical $N=4$ agent cluster with decentralized ring observation sharing.
-* **Scaling Bottleneck**: While decentralized execution scales as $O(1)$ per agent at test time, centralized mixer training (QMIX/VDN) requires global state dimension scaling linearly with $N$. For swarms exceeding $N \ge 50$, mean-field MARL or graph neural network (GNN) value mixers are required.
+## Reward and metric dependence
 
-### 4.2 Single-Objective Scalarized Reward Formulation
-* **Constraint**: The optimization objective combines energy conservation, information gain, Age of Information (AoI), and collision avoidance through linear scalar weights ($w_{info}, w_{energy}, w_{aoi}, w_{red}, w_{miss}, w_{rejection}$).
-* **Multi-Objective Trade-Offs**: Different real-world deployments prioritize distinct Pareto frontiers (e.g., zero-tolerance event capture vs. zero-maintenance self-sustaining lifespan). Pareto Multi-Objective RL (MORL) would be required to generate continuous policy sets across all trade-off curves.
+The objective is a scalarization of capture, miss, sample energy, AoI, rejection, redundancy, contention, and coverage terms. The weights encode one engineering preference and are not fitted to deployment stakeholder utilities. A different safety or maintenance objective can change policy rankings.
 
----
+Raw reward is comparable across policies within a regime because every benchmark policy uses the same environment and objective. Raw reward should not be compared naively across regimes because event processes and coordination components differ. Recall, energy, AoI, and other physical metrics should accompany every reward claim.
 
-## 5. Summary Matrix of Verifications & Assumptions
+## Training and model selection
 
-| Component | Status | Empirical Basis / Authoritative Reference |
-| :--- | :--- | :--- |
-| **Battery Energy Model** | Verified | Datasheet: 500 mAh @ 3.7V Li-ion (5550 mWh capacity) |
-| **Sensor Power Cost** | Verified | Datasheet: 3.8 mA @ 3.7V, 1.0 s burst = 14.06 mJ per sample |
-| **Sleep Power Cost** | Verified | Datasheet: 15 µA @ 3.7V sleep current = 55.5 µW base draw |
-| **Solar Irradiance** | Verified | Canonical Diurnal Model: 50 mW peak PV cell + AR(1) cloud attenuation |
-| **MARL Inference** | Measured | PyTorch / ONNX Runtime execution on macOS host |
-| **MCU Latency / Energy** | Estimated | Datasheet-driven cycle-accurate analytical model based on CPU clock & rated active mA |
-| **Quantization Compression** | Measured | 4.00x reduction in parameter storage (4802 bytes INT8 vs 19208 bytes FP32) |
-| **Multi-Scenario Robustness**| Measured | 30 held-out Monte Carlo seeds (1001–1030) tested across Stable, Volatile, and Stress scenarios |
+Three training seeds meet the requested minimum but provide limited evidence about optimization variance. The 60,000-step budget, recurrent 64-unit architecture, optimizer settings, and validation-reward selection rule are a finite design choice rather than a proof of convergence or optimality.
+
+Checkpoint selection uses ten validation seeds (`201`–`210`) and never uses the locked test seeds (`1001`–`1030`). This avoids direct test leakage but does not eliminate researcher degrees of freedom in earlier environment and reward design.
+
+IQL, VDN, and QMIX use parameter-shared recurrent agents. Results do not extend automatically to graph neural networks, actor-critic methods, offline RL, model-based control, longer training, or hyperparameter sweeps.
+
+## Statistics
+
+Confidence intervals use 30 held-out environment seeds as sampling units after averaging the three learned training replicas within each environment seed. Paired t-tests assume the paired differences are approximately normal. Multiple policies and metrics are explored, so unadjusted p-values should not be treated as a family-wise confirmatory analysis.
+
+The 5% practical threshold is an explicit reporting convention, not a stakeholder-validated minimum clinically or economically important difference. Statistical support and practical engineering relevance are reported separately.
+
+Simulation seeds create paired stochastic worlds, not independent real deployments. Generalization across seasons, sites, hardware, and event distributions remains untested.
+
+## Ablations
+
+Each ablation is retrained with three seeds and scored in the common full coordinated evaluation environment. This is stronger than applying a frozen policy to a modified reward, but an ablation can change optimization difficulty as well as remove information or inductive bias. A null ablation difference does not prove that a component is universally useless, and a difference does not by itself identify a unique causal mechanism.
+
+## TinyML tooling boundary
+
+The separate `hardware_eval/` utilities measure model dimensions and host-runtime properties but estimate several microcontroller latency and energy quantities from device specifications. Those estimates are not measurements on target silicon and should not be called cycle-accurate hardware validation without board-level power and timing experiments.
+
+The current recurrent ONNX models are larger than older legacy MLP artifacts in this repository. Hardware conclusions derived from an old parameter count or model file must be regenerated against the selected final ONNX exports.
+
+## Reproducibility state
+
+Run manifests record the base Git SHA and that the worktree was dirty during the final experiments. They also save exact commands, configurations, validation decisions, and output paths. A publication archive should include the complete diff or a commit containing these changes before claiming bit-for-bit code provenance.

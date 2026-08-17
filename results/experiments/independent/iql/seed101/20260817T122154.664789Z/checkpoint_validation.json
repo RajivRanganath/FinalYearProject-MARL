@@ -1,0 +1,98 @@
+[
+  {
+    "checkpoint": "/Users/rajiv/Desktop/FinalYearProject-MARL/results/experiments/independent/iql/seed101/20260817T122154.664789Z/models/iql_seed101_iot_independent_2026-08-17 17:51:55.661747/288",
+    "validation_seeds": [
+      201,
+      202,
+      203,
+      204,
+      205,
+      206,
+      207,
+      208,
+      209,
+      210
+    ],
+    "mean_team_reward": -346.799999999998,
+    "std_team_reward": 27.182715096178253,
+    "mean_event_recall": 0.0,
+    "mean_sample_fraction": 0.0,
+    "action_counts": [
+      11520,
+      0
+    ],
+    "chooses_both_actions": false
+  },
+  {
+    "checkpoint": "/Users/rajiv/Desktop/FinalYearProject-MARL/results/experiments/independent/iql/seed101/20260817T122154.664789Z/models/iql_seed101_iot_independent_2026-08-17 17:51:55.661747/15552",
+    "validation_seeds": [
+      201,
+      202,
+      203,
+      204,
+      205,
+      206,
+      207,
+      208,
+      209,
+      210
+    ],
+    "mean_team_reward": -27.04650000000003,
+    "std_team_reward": 46.0998986242558,
+    "mean_event_recall": 0.4977607863825077,
+    "mean_sample_fraction": 0.4995659722222222,
+    "action_counts": [
+      5765,
+      5755
+    ],
+    "chooses_both_actions": true
+  },
+  {
+    "checkpoint": "/Users/rajiv/Desktop/FinalYearProject-MARL/results/experiments/independent/iql/seed101/20260817T122154.664789Z/models/iql_seed101_iot_independent_2026-08-17 17:51:55.661747/30816",
+    "validation_seeds": [
+      201,
+      202,
+      203,
+      204,
+      205,
+      206,
+      207,
+      208,
+      209,
+      210
+    ],
+    "mean_team_reward": -27.04650000000003,
+    "std_team_reward": 46.0998986242558,
+    "mean_event_recall": 0.4977607863825077,
+    "mean_sample_fraction": 0.4995659722222222,
+    "action_counts": [
+      5765,
+      5755
+    ],
+    "chooses_both_actions": true
+  },
+  {
+    "checkpoint": "/Users/rajiv/Desktop/FinalYearProject-MARL/results/experiments/independent/iql/seed101/20260817T122154.664789Z/models/iql_seed101_iot_independent_2026-08-17 17:51:55.661747/46080",
+    "validation_seeds": [
+      201,
+      202,
+      203,
+      204,
+      205,
+      206,
+      207,
+      208,
+      209,
+      210
+    ],
+    "mean_team_reward": -27.041600000000034,
+    "std_team_reward": 46.10332998626257,
+    "mean_event_recall": 0.4977607863825077,
+    "mean_sample_fraction": 0.4995659722222222,
+    "action_counts": [
+      5765,
+      5755
+    ],
+    "chooses_both_actions": true
+  }
+]

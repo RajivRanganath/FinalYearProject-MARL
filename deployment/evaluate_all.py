@@ -1,339 +1,399 @@
-"""
-Comprehensive Multi-Baseline & Multi-Seed Benchmarking Engine
-MARL Adaptive IoT Sampling & TinyML Evaluation
+"""Paired 30-seed benchmark for both scientific experiment regimes."""
 
-Evaluates 10 distinct policies across 30+ held-out test seeds (seeds 1001 to 1030):
-1. Always Sleep (Lower Bound)
-2. Always Sample (Feasible)
-3. Random Feasible
-4. Fixed Interval (N=12, hourly)
-5. Battery Threshold (< 20% sleep)
-6. Entropy Threshold (> 0.60 sample)
-7. Battery + Entropy Heuristic
-8. Greedy Myopic Heuristic
-9. Oracle Upper Bound (Omniscient / Non-deployable reference)
-10. Trained MARL Policies (QMIX, VDN, IQL)
+from __future__ import annotations
 
-Outputs machine-readable CSV/JSON and formatted Markdown tables with 95% Confidence Intervals.
-"""
-
-import sys
-import json
-import math
 import argparse
+import math
+from pathlib import Path
+import re
+import sys
+from typing import Any, Dict, Iterable, List, Optional
+
 import numpy as np
 import pandas as pd
-import onnxruntime as ort
-from pathlib import Path
-from typing import Dict, List, Any, Callable
+from scipy import stats
 
-# Cross-platform path setup
 ROOT_DIR = Path(__file__).resolve().parent.parent
 if str(ROOT_DIR) not in sys.path:
     sys.path.append(str(ROOT_DIR))
 
 import shared_config
 from environment.pettingzoo_env import IoTSensorEnv
+from training.policy_runtime import ONNXPolicy
 
-# -----------------------------------------------------------------------------
-# 1. Baseline Policy Functions
-# -----------------------------------------------------------------------------
 
-def policy_always_sleep(agent_id: str, obs: np.ndarray, info: dict) -> int:
-    return shared_config.ACTION_SLEEP
+class StatelessPolicy:
+    train_seed: Optional[int] = None
 
-def policy_always_sample_feasible(agent_id: str, obs: np.ndarray, info: dict) -> int:
-    mask = info.get("action_mask", [1, 1])
-    return shared_config.ACTION_SAMPLE if mask[1] == 1 else shared_config.ACTION_SLEEP
+    def reset(self, seed: int) -> None:
+        self.seed = seed
 
-def policy_random_feasible(agent_id: str, obs: np.ndarray, info: dict) -> int:
-    mask = info.get("action_mask", [1, 1])
-    if mask[1] == 1:
-        return int(np.random.choice([shared_config.ACTION_SLEEP, shared_config.ACTION_SAMPLE]))
-    return shared_config.ACTION_SLEEP
 
-def policy_fixed_interval(agent_id: str, obs: np.ndarray, info: dict) -> int:
-    timestep = info.get("timestep", 0)
-    mask = info.get("action_mask", [1, 1])
-    if (timestep % shared_config.BASELINE_FIXED_INTERVAL_N == 0) and (mask[1] == 1):
-        return shared_config.ACTION_SAMPLE
-    return shared_config.ACTION_SLEEP
-
-def policy_battery_threshold(agent_id: str, obs: np.ndarray, info: dict) -> int:
-    battery = obs[shared_config.STATE_INDEX_RESIDUAL_ENERGY]
-    mask = info.get("action_mask", [1, 1])
-    if (battery >= shared_config.BASELINE_RULE_BATTERY_THRESHOLD) and (mask[1] == 1):
-        return shared_config.ACTION_SAMPLE
-    return shared_config.ACTION_SLEEP
-
-def policy_entropy_threshold(agent_id: str, obs: np.ndarray, info: dict) -> int:
-    entropy = obs[shared_config.STATE_INDEX_DATA_ENTROPY]
-    mask = info.get("action_mask", [1, 1])
-    if (entropy >= shared_config.BASELINE_RULE_ENTROPY_THRESHOLD) and (mask[1] == 1):
-        return shared_config.ACTION_SAMPLE
-    return shared_config.ACTION_SLEEP
-
-def policy_battery_entropy_heuristic(agent_id: str, obs: np.ndarray, info: dict) -> int:
-    battery = obs[shared_config.STATE_INDEX_RESIDUAL_ENERGY]
-    entropy = obs[shared_config.STATE_INDEX_DATA_ENTROPY]
-    mask = info.get("action_mask", [1, 1])
-    if mask[1] == 0:
+class AlwaysSleep(StatelessPolicy):
+    def select_action(self, agent_id: str, obs: np.ndarray, info: dict) -> int:
         return shared_config.ACTION_SLEEP
-    # Sample if urgent event (entropy > 0.6) or if abundant energy (battery > 0.7 and entropy > 0.3)
-    if (entropy >= 0.60) or (battery >= 0.70 and entropy >= 0.30):
-        return shared_config.ACTION_SAMPLE
-    return shared_config.ACTION_SLEEP
 
-def policy_greedy_myopic(agent_id: str, obs: np.ndarray, info: dict) -> int:
-    entropy = obs[shared_config.STATE_INDEX_DATA_ENTROPY]
-    mask = info.get("action_mask", [1, 1])
-    if mask[1] == 0:
-        return shared_config.ACTION_SLEEP
-    # Expected reward for sample = w_info * I_event - w_energy
-    # Expected reward for sleep = -w_miss * I_event
-    is_event = (entropy >= shared_config.BASELINE_RULE_ENTROPY_THRESHOLD)
-    r_sample = (shared_config.REWARD_WEIGHTS["w_info"] - shared_config.REWARD_WEIGHTS["w_energy"]) if is_event else -shared_config.REWARD_WEIGHTS["w_energy"]
-    r_sleep = -shared_config.REWARD_WEIGHTS["w_miss"] if is_event else 0.0
-    return shared_config.ACTION_SAMPLE if r_sample > r_sleep else shared_config.ACTION_SLEEP
 
-class ONNXPolicyWrapper:
-    """Wraps ONNX model for decentralized inference."""
-    def __init__(self, onnx_path: str):
-        self.session = ort.InferenceSession(str(onnx_path))
-        hidden_inputs = [inp for inp in self.session.get_inputs() if 'hidden' in inp.name]
-        h_dim = hidden_inputs[0].shape[1] if (hidden_inputs and isinstance(hidden_inputs[0].shape[1], int)) else shared_config.HIDDEN_DIM
-        self.hidden_zero = np.zeros((1, h_dim), dtype=np.float32)
+class AlwaysSample(StatelessPolicy):
+    def select_action(self, agent_id: str, obs: np.ndarray, info: dict) -> int:
+        return shared_config.ACTION_SAMPLE if info["action_mask"][1] else shared_config.ACTION_SLEEP
+
+
+class RandomFeasible(StatelessPolicy):
+    def reset(self, seed: int) -> None:
+        self.rng = np.random.RandomState(seed + 7919)
 
     def select_action(self, agent_id: str, obs: np.ndarray, info: dict) -> int:
-        agent_idx = int(agent_id.split("_")[1])
-        one_hot = np.zeros(shared_config.NUM_AGENTS, dtype=np.float32)
-        one_hot[agent_idx] = 1.0
+        available = np.flatnonzero(info["action_mask"])
+        return int(self.rng.choice(available))
 
-        full_obs = np.concatenate([obs, one_hot]).astype(np.float32)
-        full_obs = np.expand_dims(full_obs, axis=0)
 
-        outputs = self.session.run(None, {
-            'obs': full_obs,
-            'hidden_state_in': self.hidden_zero
-        })
-        q_values = outputs[0][0]
-        mask = info.get("action_mask", [1, 1])
+class FixedInterval(StatelessPolicy):
+    def select_action(self, agent_id: str, obs: np.ndarray, info: dict) -> int:
+        # A deployable staggered schedule is stronger than synchronising every
+        # node and is fair to the learned coordination methods.
+        idx = int(agent_id.split("_")[1])
+        interval = shared_config.BASELINE_FIXED_INTERVAL_N
+        offset = (idx * interval) // shared_config.NUM_AGENTS
+        due = (info["timestep"] - offset) % interval == 0
+        return shared_config.ACTION_SAMPLE if due and info["action_mask"][1] else shared_config.ACTION_SLEEP
 
-        # Mask unavailable actions
-        if mask[1] == 0:
+
+class EntropyThreshold(StatelessPolicy):
+    def select_action(self, agent_id: str, obs: np.ndarray, info: dict) -> int:
+        proxy = obs[shared_config.STATE_INDEX_EVENT_PROXY]
+        return shared_config.ACTION_SAMPLE if (
+            proxy >= shared_config.BASELINE_RULE_ENTROPY_THRESHOLD and info["action_mask"][1]
+        ) else shared_config.ACTION_SLEEP
+
+
+class BatteryEntropy(StatelessPolicy):
+    def select_action(self, agent_id: str, obs: np.ndarray, info: dict) -> int:
+        battery = obs[shared_config.STATE_INDEX_RESIDUAL_ENERGY]
+        proxy = obs[shared_config.STATE_INDEX_EVENT_PROXY]
+        aoi = obs[shared_config.STATE_INDEX_AOI]
+        should_sample = (proxy >= 0.60 and battery >= 0.10) or (aoi >= 0.70 and battery >= 0.60)
+        return shared_config.ACTION_SAMPLE if should_sample and info["action_mask"][1] else shared_config.ACTION_SLEEP
+
+
+class GreedyHeuristic(StatelessPolicy):
+    def select_action(self, agent_id: str, obs: np.ndarray, info: dict) -> int:
+        if not info["action_mask"][1]:
             return shared_config.ACTION_SLEEP
+        proxy = obs[shared_config.STATE_INDEX_EVENT_PROXY]
+        neighbor_rate = obs[shared_config.STATE_INDEX_NEIGHBOR_SAMPLING_RATE]
+        p_event = (1.0 - shared_config.EVENT_PROXY_FALSE_NEGATIVE_RATE) if proxy >= 0.60 else shared_config.EVENT_PROXY_FALSE_POSITIVE_RATE
+        w = shared_config.REWARD_WEIGHTS
+        sample_value = p_event * w["w_info"] - w["w_energy"] - neighbor_rate * w["w_redundancy"]
+        sleep_value = -p_event * w["w_miss"]
+        return shared_config.ACTION_SAMPLE if sample_value > sleep_value else shared_config.ACTION_SLEEP
 
-        return int(np.argmax(q_values))
+
+def _reset_policy(policy: Any, seed: int) -> None:
+    try:
+        policy.reset(seed)
+    except TypeError:
+        policy.reset()
 
 
-# -----------------------------------------------------------------------------
-# 2. Episode Execution Engine
-# -----------------------------------------------------------------------------
+def evaluate_episode(
+    policy_name: str,
+    policy: Any,
+    scenario: str,
+    regime: str,
+    seed: int,
+) -> tuple[Dict[str, Any], List[Dict[str, Any]], List[Dict[str, Any]], List[Dict[str, Any]]]:
+    env = IoTSensorEnv(scenario=scenario, regime=regime, seed=seed)
+    obs, infos = env.reset(seed=seed)
+    _reset_policy(policy, seed)
 
-def evaluate_policy_on_episode(
-    env: IoTSensorEnv,
-    policy_fn: Callable[[str, np.ndarray, dict], int],
-    seed: int
-) -> Dict[str, Any]:
-    """
-    Runs a single episode and calculates exhaustive metrics.
-    """
-    obs_dict, info_dict = env.reset(seed=seed)
-    agent_ids = env.possible_agents
+    reward = energy = harvested = 0.0
+    events = captures = samples = requests = rejections = channel_blocks = 0
+    redundant_pairs = 0.0
+    aoi_values: List[float] = []
+    coverage_values: List[float] = []
+    trajectory: List[Dict[str, Any]] = []
+    components: List[Dict[str, Any]] = []
+    q_records: List[Dict[str, Any]] = []
+    action_counts = np.zeros(2, dtype=int)
+    done = False
+    step = 0
 
-    total_team_reward = 0.0
-    total_samples_requested = 0
-    total_samples_executed = 0
-    total_rejections = 0
-    total_events_occurred = 0
-    total_events_captured = 0
-    total_overlap_steps = 0
-    total_harvested = 0.0
-    total_consumed = 0.0
+    while not done:
+        actions: Dict[str, int] = {}
+        for aid in env.possible_agents:
+            # Policies receive a deliberately sanitised info object: no latent
+            # entropy or post-decision diagnostic can leak into the action.
+            decision_info = {
+                "timestep": step,
+                "action_mask": infos[aid]["action_mask"],
+            }
+            action = policy.select_action(aid, obs[aid], decision_info)
+            actions[aid] = action
+            action_counts[action] += 1
+            if hasattr(policy, "last_q") and aid in policy.last_q:
+                q = policy.last_q[aid]
+                q_records.append({
+                    "policy": policy_name,
+                    "training_seed": getattr(policy, "train_seed", None),
+                    "environment_seed": seed,
+                    "regime": regime,
+                    "step": step,
+                    "agent": aid,
+                    "q_sleep": float(q[0]),
+                    "q_sample": float(q[1]),
+                    "q_sample_minus_sleep": float(q[1] - q[0]),
+                })
 
-    all_aoi_values = []
-    agent_aoi = {aid: 0 for aid in agent_ids}
-    final_batteries = []
+        obs, rewards, terms, truncs, infos = env.step(actions)
+        step += 1
+        reward += sum(rewards.values())
+        delivered_this_step = sum(int(info["sample_delivered"]) for info in infos.values())
+        samples += delivered_this_step
+        requests += sum(int(info["sample_requested"]) for info in infos.values())
+        rejections += sum(int(info["sample_rejected"]) for info in infos.values())
+        channel_blocks += sum(int(info.get("channel_blocked", False)) for info in infos.values())
+        redundant_pairs += sum(info.get("neighbor_co_samplers", 0) for info in infos.values()) / 2.0
 
-    terminated = False
-    step_count = 0
+        for aid, info in infos.items():
+            event = int(info["is_high_entropy"])
+            events += event
+            captures += int(event and info["sample_delivered"])
+            energy += info["consumed_energy"]
+            harvested += info["harvested_energy"]
+            aoi_values.append(float(info["aoi"]))
+            coverage_values.append(float(info.get("network_coverage", 1.0)))
+            for name, value in info["reward_components"].items():
+                components.append({
+                    "policy": policy_name,
+                    "training_seed": getattr(policy, "train_seed", None),
+                    "environment_seed": seed,
+                    "regime": regime,
+                    "step": step,
+                    "agent": aid,
+                    "component": name,
+                    "value": float(value),
+                })
 
-    while not terminated:
-        step_count += 1
-        actions = {}
-        for aid in agent_ids:
-            act = policy_fn(aid, obs_dict[aid], info_dict.get(aid, {}))
-            actions[aid] = act
-            if act == shared_config.ACTION_SAMPLE:
-                total_samples_requested += 1
+        batteries = [info["battery"] for info in infos.values()]
+        trajectory.append({
+            "policy": policy_name,
+            "training_seed": getattr(policy, "train_seed", None),
+            "environment_seed": seed,
+            "regime": regime,
+            "step": step,
+            "battery_mean": float(np.mean(batteries)),
+            "battery_min": float(np.min(batteries)),
+            "samples": delivered_this_step,
+            "events": sum(int(info["is_high_entropy"]) for info in infos.values()),
+            "coverage": float(np.mean([info.get("network_coverage", 1.0) for info in infos.values()])),
+        })
+        done = all(terms.values()) or all(truncs.values())
 
-        next_obs, rewards, terms, truncs, next_infos = env.step(actions)
-        total_team_reward += sum(rewards.values())
-
-        executed_this_step = 0
-        for aid in agent_ids:
-            inf = next_infos[aid]
-            if inf["is_high_entropy"]:
-                total_events_occurred += 1
-                if inf["sample_executed"]:
-                    total_events_captured += 1
-
-            if inf["sample_executed"]:
-                executed_this_step += 1
-                total_samples_executed += 1
-                agent_aoi[aid] = 0
-            else:
-                agent_aoi[aid] += 1
-
-            if inf["sample_rejected"]:
-                total_rejections += 1
-
-            total_harvested += inf["harvested_energy"]
-            total_consumed += inf["consumed_energy"]
-            all_aoi_values.append(agent_aoi[aid])
-
-        if executed_this_step >= 2:
-            total_overlap_steps += 1
-
-        obs_dict = next_obs
-        info_dict = next_infos
-        terminated = all(terms.values()) or all(truncs.values())
-
-    for aid in agent_ids:
-        final_batteries.append(info_dict[aid]["battery"])
-
-    aoi_arr = np.array(all_aoi_values)
-    event_recall = (total_events_captured / max(1, total_events_occurred)) * 100.0
-    neutrality_ratio = total_harvested / max(1e-5, total_consumed)
-
-    return {
-        "team_reward": total_team_reward,
-        "samples_executed": total_samples_executed,
-        "sample_rate_pct": (total_samples_executed / (len(agent_ids) * step_count)) * 100.0,
-        "rejections": total_rejections,
-        "total_events": total_events_occurred,
-        "events_captured": total_events_captured,
-        "event_recall_pct": event_recall,
-        "missed_event_rate_pct": 100.0 - event_recall,
-        "mean_aoi": float(np.mean(aoi_arr)),
-        "median_aoi": float(np.median(aoi_arr)),
-        "p95_aoi": float(np.percentile(aoi_arr, 95)),
-        "max_aoi": float(np.max(aoi_arr)),
-        "overlap_steps": total_overlap_steps,
-        "final_battery_mean": float(np.mean(final_batteries)),
-        "total_harvested_energy": total_harvested,
-        "total_consumed_energy": total_consumed,
-        "energy_neutrality_ratio": neutrality_ratio
+    final_batteries = [info["battery"] for info in infos.values()]
+    recall = captures / max(1, events)
+    metric = {
+        "policy": policy_name,
+        "training_seed": getattr(policy, "train_seed", None),
+        "environment_seed": seed,
+        "scenario": scenario,
+        "regime": regime,
+        "raw_episode_reward": reward,
+        "event_recall": recall,
+        "missed_event_rate": 1.0 - recall,
+        "total_energy_consumption": energy,
+        "harvested_energy": harvested,
+        "final_battery": float(np.mean(final_batteries)),
+        "mean_aoi": float(np.mean(aoi_values)),
+        "p95_aoi": float(np.percentile(aoi_values, 95)),
+        "max_aoi": float(np.max(aoi_values)),
+        "redundant_sampling": redundant_pairs,
+        "network_coverage": float(np.mean(coverage_values)),
+        "network_utility": float(np.mean(coverage_values) * recall),
+        "samples_delivered": samples,
+        "samples_requested": requests,
+        "sample_rejections": rejections,
+        "channel_blocks": channel_blocks,
+        "sleep_actions": int(action_counts[0]),
+        "sample_actions": int(action_counts[1]),
+        "sample_action_fraction": float(action_counts[1] / action_counts.sum()),
     }
+    return metric, trajectory, components, q_records
 
 
-# -----------------------------------------------------------------------------
-# 3. Multi-Seed Benchmarking Runner
-# -----------------------------------------------------------------------------
+METRICS = [
+    "event_recall", "missed_event_rate", "total_energy_consumption", "harvested_energy",
+    "final_battery", "mean_aoi", "p95_aoi", "max_aoi", "redundant_sampling",
+    "network_coverage", "network_utility", "raw_episode_reward", "sample_action_fraction",
+]
 
-def run_benchmark_suite(
-    scenario: str = "stable",
-    test_seeds: List[int] = shared_config.TEST_SEEDS,
-    onnx_policy_path: str = "training/policy.onnx"
+
+def _summary(raw: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    # Average across training seeds at each environment seed, then use the 30
+    # paired environment seeds as the CI sampling units.
+    per_environment = raw.groupby(["policy", "environment_seed"], as_index=False)[METRICS].mean()
+    rows = []
+    for policy, frame in per_environment.groupby("policy"):
+        row: Dict[str, Any] = {"policy": policy, "n_environment_seeds": len(frame)}
+        for metric in METRICS:
+            values = frame[metric].to_numpy(float)
+            mean = float(np.mean(values))
+            std = float(np.std(values, ddof=1))
+            half = float(stats.t.ppf(0.975, len(values) - 1) * std / math.sqrt(len(values)))
+            row.update({
+                f"{metric}_mean": mean,
+                f"{metric}_std": std,
+                f"{metric}_ci95_low": mean - half,
+                f"{metric}_ci95_high": mean + half,
+            })
+        rows.append(row)
+    seed_summary = raw.groupby(["policy", "training_seed"], dropna=False, as_index=False)[METRICS].agg(["mean", "std"])
+    seed_summary.columns = ["_".join(col).rstrip("_") if isinstance(col, tuple) else col for col in seed_summary.columns]
+    return pd.DataFrame(rows), seed_summary, per_environment
+
+
+def _paired_comparisons(
+    per_environment: pd.DataFrame,
+    comparators: Iterable[str] = ("Battery + Entropy", "Entropy Threshold"),
 ) -> pd.DataFrame:
-    """
-    Runs all 10 policies across the test seeds and produces aggregated statistical summaries.
-    """
-    print(f"\n{'='*75}")
-    print(f"STARTING BENCHMARK EVALUATION: Scenario={scenario.upper()} | {len(test_seeds)} Seeds")
-    print(f"{'='*75}\n")
-
-    env = IoTSensorEnv(scenario=scenario)
-    onnx_path = Path(onnx_policy_path)
-    onnx_policy = ONNXPolicyWrapper(str(onnx_path)) if onnx_path.exists() else None
-
-    policies: Dict[str, Callable] = {
-        "Always Sleep": policy_always_sleep,
-        "Always Sample (Feasible)": policy_always_sample_feasible,
-        "Random Feasible": policy_random_feasible,
-        "Fixed Interval (N=12)": policy_fixed_interval,
-        "Battery Threshold (<20%)": policy_battery_threshold,
-        "Entropy Threshold (>0.60)": policy_entropy_threshold,
-        "Battery+Entropy Heuristic": policy_battery_entropy_heuristic,
-        "Greedy Myopic Heuristic": policy_greedy_myopic,
+    rows = []
+    directions = {
+        "raw_episode_reward": 1,
+        "event_recall": 1,
+        "total_energy_consumption": -1,
+        "mean_aoi": -1,
     }
+    for comparator in comparators:
+        base = per_environment[per_environment.policy == comparator].set_index("environment_seed")
+        for policy in ("IQL", "VDN", "QMIX"):
+            learned = per_environment[per_environment.policy == policy].set_index("environment_seed")
+            common = learned.index.intersection(base.index)
+            if len(common) < 2:
+                continue
+            for metric, direction in directions.items():
+                # Positive is an engineering advantage for the learned policy;
+                # negative is an engineering disadvantage, including for
+                # metrics such as energy and AoI where lower is preferable.
+                difference = direction * (
+                    learned.loc[common, metric].to_numpy()
+                    - base.loc[common, metric].to_numpy()
+                )
+                test = stats.ttest_1samp(difference, popmean=0.0)
+                std = float(np.std(difference, ddof=1))
+                mean = float(np.mean(difference))
+                threshold = 0.05 * max(abs(float(base.loc[common, metric].mean())), 1e-9)
+                practical = abs(mean) >= threshold
+                outcome = "negligible"
+                if practical:
+                    outcome = "learned advantage" if mean > 0 else "learned disadvantage"
+                rows.append({
+                    "policy": policy,
+                    "comparator": comparator,
+                    "metric": metric,
+                    "n_pairs": len(common),
+                    "advantage_mean": mean,
+                    "advantage_std": std,
+                    "test": "two-sided one-sample t-test on paired differences",
+                    "assumption": "paired seed differences are approximately normal",
+                    "statistic": float(test.statistic),
+                    "p_value": float(test.pvalue),
+                    "paired_cohens_dz": mean / std if std else np.nan,
+                    "statistically_supported_0.05": bool(test.pvalue < 0.05),
+                    "practical_threshold_5pct_comparator": threshold,
+                    "absolute_practically_meaningful": bool(practical),
+                    "practical_outcome": outcome,
+                })
+    return pd.DataFrame(rows)
 
-    if onnx_policy is not None:
-        policies["Trained QMIX (MARL)"] = onnx_policy.select_action
 
-    # Check for VDN and IQL exported models if present
-    vdn_onnx = ROOT_DIR / "results" / "exported_models" / "vdn_seed101.onnx"
-    if vdn_onnx.exists():
-        policies["Trained VDN (MARL)"] = ONNXPolicyWrapper(str(vdn_onnx)).select_action
+def _learned_policies(regime: str) -> Dict[str, List[ONNXPolicy]]:
+    root = ROOT_DIR / "results" / "learned_models" / regime
+    result: Dict[str, List[ONNXPolicy]] = {"IQL": [], "VDN": [], "QMIX": []}
+    for label in result:
+        for path in sorted(root.glob(f"{label.lower()}_seed*.onnx")):
+            match = re.search(r"seed(\d+)", path.name)
+            if not match or int(match.group(1)) not in shared_config.TRAIN_SEEDS[:3]:
+                continue
+            policy = ONNXPolicy(path)
+            policy.train_seed = int(match.group(1))
+            result[label].append(policy)
+    return result
 
-    iql_onnx = ROOT_DIR / "results" / "exported_models" / "iql_seed101.onnx"
-    if iql_onnx.exists():
-        policies["Trained IQL (MARL)"] = ONNXPolicyWrapper(str(iql_onnx)).select_action
 
-    raw_records = []
+def run_benchmark(
+    regime: str,
+    scenario: str = "volatile",
+    seeds: Iterable[int] = shared_config.TEST_SEEDS,
+    require_learned: bool = True,
+) -> pd.DataFrame:
+    seeds = list(seeds)
+    if seeds != shared_config.TEST_SEEDS:
+        print(f"WARNING: non-final seed set supplied ({len(seeds)} seeds)")
+    static = {
+        "Always Sleep": AlwaysSleep(),
+        "Always Sample": AlwaysSample(),
+        "Random Feasible": RandomFeasible(),
+        "Fixed Interval": FixedInterval(),
+        "Entropy Threshold": EntropyThreshold(),
+        "Battery + Entropy": BatteryEntropy(),
+        "Greedy": GreedyHeuristic(),
+    }
+    learned = _learned_policies(regime)
+    if require_learned and any(len(items) < 3 for items in learned.values()):
+        counts = {name: len(items) for name, items in learned.items()}
+        raise RuntimeError(f"Expected at least three trained seeds per algorithm for {regime}: {counts}")
 
-    for pol_name, pol_fn in policies.items():
-        print(f"Evaluating {pol_name}...")
-        for seed in test_seeds:
-            ep_metrics = evaluate_policy_on_episode(env, pol_fn, seed=seed)
-            ep_metrics["policy"] = pol_name
-            ep_metrics["scenario"] = scenario
-            ep_metrics["seed"] = seed
-            raw_records.append(ep_metrics)
+    raw, trajectories, components, q_records = [], [], [], []
+    policy_sets: Dict[str, List[Any]] = {name: [policy] for name, policy in static.items()}
+    policy_sets.update(learned)
+    for name, replicas in policy_sets.items():
+        for policy in replicas:
+            for seed in seeds:
+                metric, traj, comp, q_diag = evaluate_episode(name, policy, scenario, regime, seed)
+                raw.append(metric)
+                trajectories.extend(traj)
+                components.extend(comp)
+                q_records.extend(q_diag)
 
-    df_raw = pd.DataFrame(raw_records)
-    
-    # Save raw episode data
-    raw_csv = ROOT_DIR / "results" / f"benchmark_raw_{scenario}.csv"
-    raw_csv.parent.mkdir(parents=True, exist_ok=True)
-    df_raw.to_csv(raw_csv, index=False)
+    output = ROOT_DIR / "results" / "final" / regime
+    output.mkdir(parents=True, exist_ok=True)
+    raw_df = pd.DataFrame(raw)
+    summary, train_seed_summary, per_environment = _summary(raw_df)
+    paired = _paired_comparisons(per_environment)
+    raw_df.to_csv(output / "benchmark_raw.csv", index=False)
+    summary.to_csv(output / "benchmark_summary.csv", index=False)
+    train_seed_summary.to_csv(output / "training_seed_summary.csv", index=False)
+    per_environment.to_csv(output / "benchmark_per_environment_seed.csv", index=False)
+    paired.to_csv(output / "paired_comparisons.csv", index=False)
+    pd.DataFrame(trajectories).to_csv(output / "trajectories.csv", index=False)
+    pd.DataFrame(components).to_csv(output / "reward_components.csv", index=False)
+    pd.DataFrame(q_records).to_csv(output / "q_diagnostics.csv", index=False)
+    print(summary[["policy", "event_recall_mean", "total_energy_consumption_mean", "mean_aoi_mean", "raw_episode_reward_mean"]].to_string(index=False))
+    return summary
 
-    # Compute aggregate statistics (Mean, Std, 95% CI)
-    numeric_cols = [
-        "team_reward", "event_recall_pct", "missed_event_rate_pct",
-        "mean_aoi", "p95_aoi", "max_aoi", "overlap_steps",
-        "samples_executed", "rejections", "final_battery_mean",
-        "energy_neutrality_ratio"
-    ]
 
-    agg_records = []
-    n_seeds = len(test_seeds)
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--regime", default="all", choices=["independent", "coordinated", "all"])
+    parser.add_argument("--scenario", default="volatile", choices=shared_config.SCENARIOS)
+    parser.add_argument("--allow-missing-learned", action="store_true")
+    parser.add_argument(
+        "--statistics-only", action="store_true",
+        help="Rebuild paired-comparison tables from saved per-environment results",
+    )
+    parser.add_argument("--n-seeds", type=int, default=30, help="Diagnostic only; final benchmark requires 30")
+    args = parser.parse_args()
+    regimes = list(shared_config.REGIMES) if args.regime == "all" else [args.regime]
+    if args.statistics_only:
+        for regime in regimes:
+            output = ROOT_DIR / "results" / "final" / regime
+            per_environment = pd.read_csv(output / "benchmark_per_environment_seed.csv")
+            _paired_comparisons(per_environment).to_csv(output / "paired_comparisons.csv", index=False)
+        return
+    seeds = shared_config.TEST_SEEDS[: args.n_seeds]
+    for regime in regimes:
+        run_benchmark(regime, args.scenario, seeds, require_learned=not args.allow_missing_learned)
 
-    for pol_name in policies.keys():
-        sub_df = df_raw[df_raw["policy"] == pol_name]
-        row = {"policy": pol_name, "scenario": scenario, "n_seeds": n_seeds}
-        for col in numeric_cols:
-            mean_val = float(sub_df[col].mean())
-            std_val = float(sub_df[col].std())
-            ci95 = 1.96 * (std_val / math.sqrt(n_seeds)) if n_seeds > 1 else 0.0
-
-            row[f"{col}_mean"] = round(mean_val, 2)
-            row[f"{col}_std"] = round(std_val, 2)
-            row[f"{col}_ci95"] = round(ci95, 2)
-            row[f"{col}_formatted"] = f"{mean_val:.2f} ± {ci95:.2f}"
-
-        agg_records.append(row)
-
-    df_agg = pd.DataFrame(agg_records)
-    agg_csv = ROOT_DIR / "results" / f"benchmark_summary_{scenario}.csv"
-    df_agg.to_csv(agg_csv, index=False)
-
-    print("\n" + "=" * 75)
-    print(f"BENCHMARK SUMMARY ({scenario.upper()} - 30 SEEDS):")
-    print("=" * 75)
-    print(df_agg[["policy", "team_reward_formatted", "event_recall_pct_formatted", "mean_aoi_formatted", "rejections_formatted", "final_battery_mean_formatted"]].to_string(index=False))
-
-    return df_agg
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Evaluate MARL & Baselines across 30 test seeds.")
-    parser.add_argument("--scenario", type=str, default="stable", choices=["stable", "volatile", "stress", "all"])
-    parser.add_argument("--onnx", type=str, default="training/policy.onnx")
-
-    args = parser.parse_args()
-
-    if args.scenario == "all":
-        for sc in ["stable", "volatile", "stress"]:
-            run_benchmark_suite(scenario=sc, onnx_policy_path=args.onnx)
-    else:
-        run_benchmark_suite(scenario=args.scenario, onnx_policy_path=args.onnx)
+    main()

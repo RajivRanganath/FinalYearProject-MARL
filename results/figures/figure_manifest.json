@@ -1,0 +1,24 @@
+{
+  "principle": "All values loaded from saved experiment CSV/JSON artifacts; no metric literals.",
+  "sources": [
+    "results/experiments/**/summary.json",
+    "results/experiments/**/sacred_metrics.json",
+    "results/final/{independent,coordinated}/*.csv",
+    "results/ablations/*.csv"
+  ],
+  "figures": [
+    "results/figures/01_training_learning_curves.png",
+    "results/figures/02_action_distribution.png",
+    "results/figures/03_q_sample_minus_sleep.png",
+    "results/figures/04_reward_component_distributions.png",
+    "results/figures/05_event_recall.png",
+    "results/figures/06_energy_consumption.png",
+    "results/figures/07_mean_aoi.png",
+    "results/figures/08_redundant_sampling.png",
+    "results/figures/09_battery_trajectory.png",
+    "results/figures/10_independent_vs_coordinated.png",
+    "results/figures/11_retrained_ablation_results.png",
+    "results/figures/12_energy_vs_event_recall.png",
+    "results/figures/13_energy_vs_aoi.png"
+  ]
+}

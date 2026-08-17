@@ -1,0 +1,98 @@
+[
+  {
+    "checkpoint": "/Users/rajiv/Desktop/FinalYearProject-MARL/results/experiments/coordinated/vdn/seed102/20260817T123155.671157Z/models/vdn_seed102_iot_coordinated_2026-08-17 18:01:56.820166/288",
+    "validation_seeds": [
+      201,
+      202,
+      203,
+      204,
+      205,
+      206,
+      207,
+      208,
+      209,
+      210
+    ],
+    "mean_team_reward": -183.994666666667,
+    "std_team_reward": 55.49737002755446,
+    "mean_event_recall": 0.33122494469959396,
+    "mean_sample_fraction": 0.3330729166666667,
+    "action_counts": [
+      4166,
+      7354
+    ],
+    "chooses_both_actions": true
+  },
+  {
+    "checkpoint": "/Users/rajiv/Desktop/FinalYearProject-MARL/results/experiments/coordinated/vdn/seed102/20260817T123155.671157Z/models/vdn_seed102_iot_coordinated_2026-08-17 18:01:56.820166/15552",
+    "validation_seeds": [
+      201,
+      202,
+      203,
+      204,
+      205,
+      206,
+      207,
+      208,
+      209,
+      210
+    ],
+    "mean_team_reward": -169.0445666666669,
+    "std_team_reward": 53.109358738652276,
+    "mean_event_recall": 0.33642556465356543,
+    "mean_sample_fraction": 0.33255208333333336,
+    "action_counts": [
+      4854,
+      6666
+    ],
+    "chooses_both_actions": true
+  },
+  {
+    "checkpoint": "/Users/rajiv/Desktop/FinalYearProject-MARL/results/experiments/coordinated/vdn/seed102/20260817T123155.671157Z/models/vdn_seed102_iot_coordinated_2026-08-17 18:01:56.820166/30816",
+    "validation_seeds": [
+      201,
+      202,
+      203,
+      204,
+      205,
+      206,
+      207,
+      208,
+      209,
+      210
+    ],
+    "mean_team_reward": -62.020733333333325,
+    "std_team_reward": 50.28465987344109,
+    "mean_event_recall": 0.3864389331107656,
+    "mean_sample_fraction": 0.29201388888888885,
+    "action_counts": [
+      7136,
+      4384
+    ],
+    "chooses_both_actions": true
+  },
+  {
+    "checkpoint": "/Users/rajiv/Desktop/FinalYearProject-MARL/results/experiments/coordinated/vdn/seed102/20260817T123155.671157Z/models/vdn_seed102_iot_coordinated_2026-08-17 18:01:56.820166/46080",
+    "validation_seeds": [
+      201,
+      202,
+      203,
+      204,
+      205,
+      206,
+      207,
+      208,
+      209,
+      210
+    ],
+    "mean_team_reward": 2.353733333333339,
+    "std_team_reward": 46.29725157717249,
+    "mean_event_recall": 0.4525708633484126,
+    "mean_sample_fraction": 0.27022569444444444,
+    "action_counts": [
+      7623,
+      3897
+    ],
+    "chooses_both_actions": true
+  }
+]

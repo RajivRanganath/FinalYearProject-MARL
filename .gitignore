@@ -18,3 +18,7 @@ results/sacred/
 results/training/
 training/epymarl/results/
 
+# Large uncompressed diagnostic dumps (>100MB GitHub limit; tracked as .csv.gz)
+results/final/*/reward_components.csv
+
+

@@ -1,0 +1,131 @@
+{
+  "artifacts": [],
+  "command": "my_main",
+  "experiment": {
+    "base_dir": "/Users/rajiv/Desktop/FinalYearProject-MARL/training/epymarl/src",
+    "dependencies": [
+      "numpy==2.5.2",
+      "pyyaml==5.3.1",
+      "sacred==0.8.7",
+      "torch==2.13.0"
+    ],
+    "mainfile": "main.py",
+    "name": "pymarl",
+    "repositories": [
+      {
+        "commit": "2254313b30ca80ca5f042c7ed1c32e4e6bac6afa",
+        "dirty": true,
+        "url": "git@github.com:RajivRanganath/FinalYearProject-MARL.git"
+      },
+      {
+        "commit": "2254313b30ca80ca5f042c7ed1c32e4e6bac6afa",
+        "dirty": true,
+        "url": "git@github.com:RajivRanganath/FinalYearProject-MARL.git"
+      },
+      {
+        "commit": "2254313b30ca80ca5f042c7ed1c32e4e6bac6afa",
+        "dirty": true,
+        "url": "git@github.com:RajivRanganath/FinalYearProject-MARL.git"
+      }
+    ],
+    "sources": [
+      [
+        "main.py",
+        "_sources/main_754e3e09e8f78daf878b90824fef8fe3.py"
+      ],
+      [
+        "run.py",
+        "_sources/run_29fd448eb2929a57e5fd2547c431175b.py"
+      ],
+      [
+        "utils/logging.py",
+        "_sources/logging_80685d67fab61f6e71e93fbe28085531.py"
+      ]
+    ]
+  },
+  "heartbeat": "2026-08-17T12:58:55.787416",
+  "host": {
+    "ENV": {},
+    "cpu": "Apple M4",
+    "hostname": "Rajivs-MacBook-Air.local",
+    "os": [
+      "Darwin",
+      "macOS-15.7.7-arm64-arm-64bit"
+    ],
+    "python_version": "3.12.13"
+  },
+  "meta": {
+    "command": "my_main",
+    "config_updates": {
+      "batch_size": 16,
+      "buffer_size": 5000,
+      "env_args": {
+        "ablation": "no_agent_id",
+        "map_name": "iot_coordinated",
+        "regime": "coordinated",
+        "scenario": "volatile"
+      },
+      "epsilon_anneal_time": 36000,
+      "epsilon_finish": 0.05,
+      "local_results_path": "/Users/rajiv/Desktop/FinalYearProject-MARL/results/experiments/coordinated/qmix/seed103/20260817T125740.902102Z",
+      "lr": 0.0005,
+      "obs_agent_id": false,
+      "save_model": true,
+      "save_model_interval": 15000,
+      "seed": 103,
+      "t_max": 60000,
+      "test_interval": 15000,
+      "use_cuda": false
+    },
+    "named_configs": [],
+    "options": {
+      "--beat-interval": null,
+      "--capture": null,
+      "--comment": null,
+      "--debug": false,
+      "--enforce_clean": false,
+      "--file_storage": null,
+      "--force": false,
+      "--help": false,
+      "--id": null,
+      "--loglevel": null,
+      "--mongo_db": null,
+      "--name": null,
+      "--pdb": false,
+      "--print-config": false,
+      "--priority": null,
+      "--queue": false,
+      "--s3": null,
+      "--sql": null,
+      "--tiny_db": null,
+      "--unobserved": false,
+      "COMMAND": null,
+      "UPDATE": [
+        "seed=103",
+        "t_max=60000",
+        "lr=0.0005",
+        "use_cuda=False",
+        "batch_size=16",
+        "buffer_size=5000",
+        "epsilon_anneal_time=36000",
+        "epsilon_finish=0.05",
+        "save_model=True",
+        "save_model_interval=15000",
+        "test_interval=15000",
+        "env_args.scenario=volatile",
+        "env_args.regime=coordinated",
+        "env_args.ablation=no_agent_id",
+        "env_args.map_name=iot_coordinated",
+        "obs_agent_id=False",
+        "local_results_path=/Users/rajiv/Desktop/FinalYearProject-MARL/results/experiments/coordinated/qmix/seed103/20260817T125740.902102Z"
+      ],
+      "help": false,
+      "with": true
+    }
+  },
+  "resources": [],
+  "result": null,
+  "start_time": "2026-08-17T12:57:44.016599",
+  "status": "COMPLETED",
+  "stop_time": "2026-08-17T12:58:55.776678"
+}

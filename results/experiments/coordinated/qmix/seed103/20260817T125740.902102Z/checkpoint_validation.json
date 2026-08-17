@@ -1,0 +1,98 @@
+[
+  {
+    "checkpoint": "/Users/rajiv/Desktop/FinalYearProject-MARL/results/experiments/coordinated/qmix/seed103/20260817T125740.902102Z/models/qmix_seed103_iot_coordinated_2026-08-17 18:27:44.022199/288",
+    "validation_seeds": [
+      201,
+      202,
+      203,
+      204,
+      205,
+      206,
+      207,
+      208,
+      209,
+      210
+    ],
+    "mean_team_reward": -388.04999999999836,
+    "std_team_reward": 62.94461851500871,
+    "mean_event_recall": 0.0,
+    "mean_sample_fraction": 0.0,
+    "action_counts": [
+      11520,
+      0
+    ],
+    "chooses_both_actions": false
+  },
+  {
+    "checkpoint": "/Users/rajiv/Desktop/FinalYearProject-MARL/results/experiments/coordinated/qmix/seed103/20260817T125740.902102Z/models/qmix_seed103_iot_coordinated_2026-08-17 18:27:44.022199/15552",
+    "validation_seeds": [
+      201,
+      202,
+      203,
+      204,
+      205,
+      206,
+      207,
+      208,
+      209,
+      210
+    ],
+    "mean_team_reward": -183.994666666667,
+    "std_team_reward": 55.49737002755446,
+    "mean_event_recall": 0.33122494469959396,
+    "mean_sample_fraction": 0.3330729166666667,
+    "action_counts": [
+      4166,
+      7354
+    ],
+    "chooses_both_actions": true
+  },
+  {
+    "checkpoint": "/Users/rajiv/Desktop/FinalYearProject-MARL/results/experiments/coordinated/qmix/seed103/20260817T125740.902102Z/models/qmix_seed103_iot_coordinated_2026-08-17 18:27:44.022199/30816",
+    "validation_seeds": [
+      201,
+      202,
+      203,
+      204,
+      205,
+      206,
+      207,
+      208,
+      209,
+      210
+    ],
+    "mean_team_reward": -17.464699999999993,
+    "std_team_reward": 50.98894576894482,
+    "mean_event_recall": 0.42369956091047545,
+    "mean_sample_fraction": 0.24765625,
+    "action_counts": [
+      7915,
+      3605
+    ],
+    "chooses_both_actions": true
+  },
+  {
+    "checkpoint": "/Users/rajiv/Desktop/FinalYearProject-MARL/results/experiments/coordinated/qmix/seed103/20260817T125740.902102Z/models/qmix_seed103_iot_coordinated_2026-08-17 18:27:44.022199/46080",
+    "validation_seeds": [
+      201,
+      202,
+      203,
+      204,
+      205,
+      206,
+      207,
+      208,
+      209,
+      210
+    ],
+    "mean_team_reward": 89.68293333333331,
+    "std_team_reward": 43.13982829478701,
+    "mean_event_recall": 0.5317910961962695,
+    "mean_sample_fraction": 0.22291666666666665,
+    "action_counts": [
+      8434,
+      3086
+    ],
+    "chooses_both_actions": true
+  }
+]

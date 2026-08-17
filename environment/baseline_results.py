@@ -211,8 +211,8 @@ def generate_markdown_report(results_list):
         "### Volatile Scenario Analysis",
         f"In the volatile high-spikes scenario, the **Fixed-Interval Policy** again performed best relative to unlearned baselines ({vol_fixed['total_team_reward']:.2f} team reward) due to its disciplined energy conservation, though its missed event count increased from {st_fixed['total_missed_events']} to {vol_fixed['total_missed_events']} due to higher event frequency. The **Rule-Based Policy** achieved the lowest missed event count ({vol_rule['total_missed_events']} missed events vs {vol_rand['total_missed_events']} for random and {vol_fixed['total_missed_events']} for fixed-interval) by sampling constantly whenever energy was available, but paid a massive penalty in wasted energy and redundant co-sampling ({vol_rule['overlapping_sample_steps']} overlap steps), yielding the worst team reward ({vol_rule['total_team_reward']:.2f}). The **Random Policy** performed poorly ({vol_rand['total_team_reward']:.2f}) due to {vol_rand['total_rejections']} energy causality rejections.",
         "",
-        "### Conclusion for MARL Training (Module B Target)",
-        "Static heuristics present a clear failure tradeoff: Rule-based policies minimize missed events but drain batteries and waste energy during boring periods, while fixed-interval policies conserve energy but miss sparse events. The MARL policy trained in Module B must learn to selectively sample only when `data_entropy` spikes while using `neighbor_sampling_rate` to avoid overlapping transmissions, outperforming both baselines."
+        "### Conclusion for MARL Training (Module B Question)",
+        "These legacy baselines expose an energy-information trade-off; they do not establish that MARL must outperform them. The final causal benchmark tests learned policies against stronger event-proxy heuristics in separate independent and coordinated regimes and retains a heuristic win when observed."
     ])
 
     return "\n".join(md_lines)

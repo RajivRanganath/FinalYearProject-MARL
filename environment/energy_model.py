@@ -64,6 +64,11 @@ class PhysicalEnergyProfile:
     # E_sleep_per_timestep = 49.5 µW * 300 s = 14.85 mJ = 0.01485 J
     normalized_sleep_cost: float = 0.00015
 
+    # Low-power wake-up/event detector.  This is the only source of the
+    # pre-decision event proxy; the full sensor measurement is not available
+    # until SAMPLE is executed.  Its quiescent cost is charged every step.
+    normalized_proxy_monitor_cost: float = 0.00002
+
     # Solar Harvesting Parameters (50mm x 50mm Monocrystalline panel, 18% efficiency)
     panel_area_m2: float = 0.05 * 0.05     # 0.0025 m²
     panel_efficiency: float = 0.18         # 18% PV conversion efficiency
@@ -90,6 +95,11 @@ class EnergyModel:
     def sleep_energy_cost(self) -> float:
         """Normalized energy dissipated in sleep over one 5-minute timestep."""
         return self.profile.normalized_sleep_cost
+
+    @property
+    def proxy_monitor_energy_cost(self) -> float:
+        """Energy used by the causal low-power event detector each timestep."""
+        return self.profile.normalized_proxy_monitor_cost
 
     @property
     def max_harvest_rate(self) -> float:

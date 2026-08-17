@@ -28,11 +28,12 @@ class IoTSensorEnv(ParallelEnv):
     Standard PettingZoo ParallelEnv environment for multi-agent IoT sensor coordination.
     """
 
-    metadata = {"render_modes": ["human"], "name": "iot_sensor_env_v1"}
+    metadata = {"render_modes": ["human"], "name": "iot_sensor_env_v2"}
 
     def __init__(
         self,
         scenario: str = "stable",
+        regime: str = "independent",
         render_mode: Optional[str] = None,
         seed: Optional[int] = None,
         topology: str = "ring",
@@ -40,6 +41,7 @@ class IoTSensorEnv(ParallelEnv):
     ):
         super().__init__()
         self.scenario = scenario
+        self.regime = regime
         self.render_mode = render_mode
         self.possible_agents = [f"agent_{i}" for i in range(shared_config.NUM_AGENTS)]
         self.agents = self.possible_agents[:]
@@ -48,6 +50,7 @@ class IoTSensorEnv(ParallelEnv):
         self.underlying_env = MultiAgentSensorEnv(
             num_agents=shared_config.NUM_AGENTS,
             scenario=scenario,
+            regime=regime,
             seed=seed,
             topology=topology,
             **kwargs
@@ -89,8 +92,8 @@ class IoTSensorEnv(ParallelEnv):
         """
         if seed is not None:
             self.underlying_env.seed(seed)
-        elif hasattr(shared_config, "SEED"):
-            self.underlying_env.seed(shared_config.SEED)
+        # With seed=None, continue each environment's private RNG stream.
+        # Re-seeding here used to replay the exact same day every episode.
 
         self.agents = self.possible_agents[:]
         self.timestep = 0
@@ -112,10 +115,10 @@ class IoTSensorEnv(ParallelEnv):
         return obs, rewards, terms, truncs, infos
 
     def render(self):
-        """Minimal text render of current agent battery and entropy states."""
+        """Minimal text render without exposing latent entropy to the policy."""
         if self.render_mode == "human":
             states = [
-                f"{aid}: Bat={self.underlying_env.agents[aid].battery:.2f}, Ent={self.underlying_env.agents[aid].current_entropy:.2f}, AoI={self.underlying_env.agents[aid].aoi}"
+                f"{aid}: Bat={self.underlying_env.agents[aid].battery:.2f}, Proxy={self.underlying_env.agents[aid].event_proxy:.2f}, AoI={self.underlying_env.agents[aid].aoi}"
                 for aid in self.possible_agents
             ]
             print(f"[Step {self.timestep}] | " + " | ".join(states))
@@ -125,12 +128,7 @@ class IoTSensorEnv(ParallelEnv):
 
     def state(self) -> np.ndarray:
         """Global state vector for Centralized Training with Decentralized Execution (CTDE)."""
-        obs_list = [
-            np.array([
-                self.underlying_env.agents[aid].battery,
-                self.underlying_env.agents[aid].current_entropy,
-                self.underlying_env._get_neighbor_sampling_rate(aid)
-            ], dtype=np.float32)
-            for aid in self.possible_agents
-        ]
+        # CTDE mixer state is the concatenation of causally available local
+        # observations. Latent entropy is intentionally excluded.
+        obs_list = [self.underlying_env._compose_obs(aid) for aid in self.possible_agents]
         return np.concatenate(obs_list)

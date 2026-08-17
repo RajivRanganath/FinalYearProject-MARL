@@ -33,15 +33,30 @@ class IoTSensorEnvWrapper(MultiAgentEnv):
 
     def __init__(self, **kwargs):
         scenario = kwargs.get("scenario", "stable")
+        regime = kwargs.get("regime", "independent")
+        ablation = kwargs.get("ablation", "full")
         seed = kwargs.get("seed", shared_config.SEED)
         
-        self.env = IoTSensorEnv(scenario=scenario, seed=seed)
+        self.env = IoTSensorEnv(scenario=scenario, regime=regime, ablation=ablation, seed=seed)
+        self.scenario = scenario
+        self.regime = regime
+        self.ablation = ablation
         self.n_agents = shared_config.NUM_AGENTS
         self.n_actions = shared_config.NUM_ACTIONS
         self.episode_limit = shared_config.EPISODE_LENGTH_TIMESTEPS
         self._obs: Dict[str, np.ndarray] = {}
         self._avail_actions: Dict[str, np.ndarray] = {}
+        self._reset_episode_stats()
         self.reset(seed=seed)
+
+    def _reset_episode_stats(self) -> None:
+        self._episode_steps = 0
+        self._episode_events = 0
+        self._episode_sample_requests = 0
+        self._episode_samples = 0
+        self._episode_channel_blocks = 0
+        self._episode_coverage = 0.0
+        self._component_totals: Dict[str, float] = {}
 
     def step(self, actions: List[int]) -> Tuple[float, bool, Dict[str, Any]]:
         """
@@ -57,13 +72,32 @@ class IoTSensorEnvWrapper(MultiAgentEnv):
         self._avail_actions = self.env.get_avail_actions()
         team_reward = float(sum(reward_dict.values()))
         terminated = all(terms.values()) or all(truncs.values())
-        env_info = {"episode_limit": self.episode_limit}
+        self._episode_steps += 1
+        self._episode_sample_requests += sum(int(a) == shared_config.ACTION_SAMPLE for a in actions)
+        self._episode_events += sum(int(info["is_high_entropy"]) for info in info_dict.values())
+        self._episode_samples += sum(int(info["sample_delivered"]) for info in info_dict.values())
+        self._episode_channel_blocks += sum(int(info.get("channel_blocked", False)) for info in info_dict.values())
+        self._episode_coverage += float(np.mean([info.get("network_coverage", 1.0) for info in info_dict.values()]))
+        for info in info_dict.values():
+            for name, value in info.get("reward_components", {}).items():
+                self._component_totals[name] = self._component_totals.get(name, 0.0) + float(value)
+
+        total_slots = max(1, self._episode_steps * self.n_agents)
+        env_info = {
+            "episode_limit": bool(terminated),
+            "event_fraction": self._episode_events / total_slots,
+            "sample_request_fraction": self._episode_sample_requests / total_slots,
+            "sample_fraction": self._episode_samples / total_slots,
+            "channel_block_fraction": self._episode_channel_blocks / total_slots,
+            "network_coverage": self._episode_coverage / max(1, self._episode_steps),
+        }
+        env_info.update({f"reward_{name}": value for name, value in self._component_totals.items()})
 
         # Returns: None (for obs), team_reward, terminated, truncated (False), env_info
         return None, team_reward, terminated, False, env_info
 
     def get_obs(self) -> List[np.ndarray]:
-        """Returns list of 3D local observations for each agent."""
+        """Returns causal local observations for each agent."""
         return [self._obs[f"agent_{i}"] for i in range(self.n_agents)]
 
     def get_obs_agent(self, agent_id: int) -> np.ndarray:
@@ -71,15 +105,15 @@ class IoTSensorEnvWrapper(MultiAgentEnv):
         return self._obs[f"agent_{agent_id}"]
 
     def get_obs_size(self) -> int:
-        """Returns size of local observation vector (3)."""
+        """Returns the configured local observation size."""
         return shared_config.ENV_OBS_DIM
 
     def get_state(self) -> np.ndarray:
-        """Returns global centralized state vector (12 floats)."""
+        """Returns the causally valid centralized state vector."""
         return np.concatenate(self.get_obs())
 
     def get_state_size(self) -> int:
-        """Returns size of global centralized state vector (12)."""
+        """Returns the configured centralized state size."""
         return shared_config.GLOBAL_STATE_DIM
 
     def get_avail_actions(self) -> List[List[int]]:
@@ -103,6 +137,7 @@ class IoTSensorEnvWrapper(MultiAgentEnv):
     def reset(self, seed: Optional[int] = None, options: Optional[dict] = None) -> Tuple[List[np.ndarray], np.ndarray]:
         """Resets environment and returns initial observations and global state."""
         obs_dict, infos = self.env.reset(seed=seed)
+        self._reset_episode_stats()
         self._obs = obs_dict
         self._avail_actions = self.env.get_avail_actions()
         return self.get_obs(), self.get_state()

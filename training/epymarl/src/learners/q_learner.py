@@ -55,6 +55,7 @@ class QLearner:
         terminated = batch["terminated"][:, :-1].float()
         mask = batch["filled"][:, :-1].float()
         mask[:, 1:] = mask[:, 1:] * (1 - terminated[:, :-1])
+        agent_mask = mask.expand(-1, -1, self.n_agents)
         avail_actions = batch["avail_actions"]
 
         if self.args.standardise_rewards:
@@ -75,6 +76,7 @@ class QLearner:
             agent_outs = self.mac.forward(batch, t=t)
             mac_out.append(agent_outs)
         mac_out = th.stack(mac_out, dim=1)  # Concat over time
+        q_sample_minus_sleep = mac_out[:, :-1, :, 1] - mac_out[:, :-1, :, 0]
         # Pick the Q-Values for the actions taken by each agent
         chosen_action_qvals = th.gather(mac_out[:, :-1], dim=3, index=actions).squeeze(
             3
@@ -171,6 +173,22 @@ class QLearner:
             self.logger.log_stat(
                 "target_mean",
                 (targets * mask).sum().item() / (mask_elems * self.args.n_agents),
+                t_env,
+            )
+            agent_mask_elems = max(1.0, agent_mask.sum().item())
+            self.logger.log_stat(
+                "q_sample_minus_sleep_mean",
+                (q_sample_minus_sleep * agent_mask).sum().item() / agent_mask_elems,
+                t_env,
+            )
+            self.logger.log_stat(
+                "q_sample_minus_sleep_std",
+                q_sample_minus_sleep[agent_mask.bool()].std().item(),
+                t_env,
+            )
+            self.logger.log_stat(
+                "target_std",
+                targets[mask.bool()].std().item(),
                 t_env,
             )
             self.log_stats_t = t_env

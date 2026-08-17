@@ -1,0 +1,197 @@
+{
+  "all_passed": true,
+  "checks": [
+    {
+      "name": "seed_partitions_disjoint",
+      "passed": true,
+      "evidence": {
+        "train": [
+          101,
+          102,
+          103
+        ],
+        "validation": [
+          201,
+          202,
+          203,
+          204,
+          205,
+          206,
+          207,
+          208,
+          209,
+          210
+        ],
+        "test": [
+          1001,
+          1002,
+          1003,
+          1004,
+          1005,
+          1006,
+          1007,
+          1008,
+          1009,
+          1010,
+          1011,
+          1012,
+          1013,
+          1014,
+          1015,
+          1016,
+          1017,
+          1018,
+          1019,
+          1020,
+          1021,
+          1022,
+          1023,
+          1024,
+          1025,
+          1026,
+          1027,
+          1028,
+          1029,
+          1030
+        ]
+      }
+    },
+    {
+      "name": "sanity_gates",
+      "passed": true,
+      "evidence": [
+        "7c0bec2f79ae2307",
+        "c4b603208648f457"
+      ]
+    },
+    {
+      "name": "full_training_matrix",
+      "passed": true,
+      "evidence": {
+        "runs": 18,
+        "successes": 18
+      }
+    },
+    {
+      "name": "selected_policies_use_both_actions",
+      "passed": true,
+      "evidence": [
+        true
+      ]
+    },
+    {
+      "name": "independent_benchmark_balance",
+      "passed": true,
+      "evidence": {
+        "Always Sample": 30,
+        "Always Sleep": 30,
+        "Battery + Entropy": 30,
+        "Entropy Threshold": 30,
+        "Fixed Interval": 30,
+        "Greedy": 30,
+        "IQL": 90,
+        "QMIX": 90,
+        "Random Feasible": 30,
+        "VDN": 90
+      }
+    },
+    {
+      "name": "independent_summary_and_statistics",
+      "passed": true,
+      "evidence": {
+        "summary_rows": 10,
+        "paired_rows": 24
+      }
+    },
+    {
+      "name": "coordinated_benchmark_balance",
+      "passed": true,
+      "evidence": {
+        "Always Sample": 30,
+        "Always Sleep": 30,
+        "Battery + Entropy": 30,
+        "Entropy Threshold": 30,
+        "Fixed Interval": 30,
+        "Greedy": 30,
+        "IQL": 90,
+        "QMIX": 90,
+        "Random Feasible": 30,
+        "VDN": 90
+      }
+    },
+    {
+      "name": "coordinated_summary_and_statistics",
+      "passed": true,
+      "evidence": {
+        "summary_rows": 10,
+        "paired_rows": 24
+      }
+    },
+    {
+      "name": "ablation_training_matrix",
+      "passed": true,
+      "evidence": {
+        "no_neighbor_signal": 3,
+        "no_redundancy": 3,
+        "no_aoi": 3,
+        "no_energy": 3,
+        "no_agent_id": 3,
+        "no_coordination_constraint": 3
+      }
+    },
+    {
+      "name": "ablation_evaluation_balance",
+      "passed": true,
+      "evidence": {
+        "full": 90,
+        "no_agent_id": 90,
+        "no_aoi": 90,
+        "no_coordination_constraint": 90,
+        "no_energy": 90,
+        "no_neighbor_signal": 90,
+        "no_redundancy": 90
+      }
+    },
+    {
+      "name": "ablation_model_contracts",
+      "passed": true,
+      "evidence": {
+        "no_neighbor_signal": 9,
+        "no_redundancy": 9,
+        "no_aoi": 9,
+        "no_energy": 9,
+        "no_agent_id": 5,
+        "no_coordination_constraint": 9
+      }
+    },
+    {
+      "name": "thirteen_final_figures",
+      "passed": true,
+      "evidence": [
+        "01_training_learning_curves.png",
+        "02_action_distribution.png",
+        "03_q_sample_minus_sleep.png",
+        "04_reward_component_distributions.png",
+        "05_event_recall.png",
+        "06_energy_consumption.png",
+        "07_mean_aoi.png",
+        "08_redundant_sampling.png",
+        "09_battery_trajectory.png",
+        "10_independent_vs_coordinated.png",
+        "11_retrained_ablation_results.png",
+        "12_energy_vs_event_recall.png",
+        "13_energy_vs_aoi.png"
+      ]
+    },
+    {
+      "name": "final_report",
+      "passed": true,
+      "evidence": "FINAL_RESEARCH_REPORT.md"
+    },
+    {
+      "name": "provenance_archive",
+      "passed": true,
+      "evidence": "results/provenance.json"
+    }
+  ]
+}

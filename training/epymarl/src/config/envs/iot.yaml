@@ -2,7 +2,9 @@ env: "iot"
 
 env_args:
   scenario: "volatile"
-  map_name: "mock"
+  regime: "independent"
+  ablation: "full"
+  map_name: "iot_sensor"
 
 test_greedy: True
 test_nepisode: 10
@@ -11,5 +13,4 @@ log_interval: 5000
 runner_log_interval: 5000
 learner_log_interval: 5000
 t_max: 200000
-gamma: 0.85
-
+gamma: 0.95

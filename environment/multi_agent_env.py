@@ -1,221 +1,292 @@
-"""
-Multi-Agent Dec-POMDP Sensor Environment (4 Agents with Spatial Topology)
-MARL Adaptive IoT Sampling Project
+"""Multi-agent sensor network with independent and coordinated regimes."""
 
-Key Features & Scientific Enhancements:
-1. Dec-POMDP Partial Observability:
-   Each agent observes strictly [residual_energy, data_entropy, neighbor_sampling_rate].
-   Raw neighbor battery levels and neighbor entropy are strictly unobservable.
-2. Spatial Topology & Localized Neighborhoods:
-   4 nodes arranged in a spatial network with defined adjacency (Ring / 2x2 Grid).
-   Neighbor sampling rate is calculated across immediate neighbors over a rolling window.
-3. Coordinated Canonical Reward Function:
-   Incentivizes capturing high-entropy events, penalizes redundant overlapping samples
-   between neighbors, penalizes data staleness (AoI), and enforces battery causality.
-4. Action Availability Masking:
-   Generates per-agent action availability masks [1, can_sample].
-"""
+from __future__ import annotations
 
-import sys
-import random
-import numpy as np
 from collections import deque
 from pathlib import Path
-from typing import Dict, Tuple, Any, Optional
+import sys
+from typing import Any, Dict, Optional, Tuple
 
-# Add project root to path
+import numpy as np
+
 ROOT_DIR = Path(__file__).resolve().parent.parent
 if str(ROOT_DIR) not in sys.path:
     sys.path.append(str(ROOT_DIR))
 
 import shared_config
-from environment.single_agent_env import SingleAgentSensorEnv
 from environment.energy_model import EnergyModel
+from environment.single_agent_env import SingleAgentSensorEnv
+
 
 class MultiAgentSensorEnv:
-    """
-    Decentralized Partially Observable Markov Decision Process (Dec-POMDP)
-    environment simulating 4 cooperating IoT sensor nodes.
-    """
+    """A Dec-POMDP with explicit, configurable sources of agent coupling."""
 
     def __init__(
         self,
         num_agents: int = shared_config.NUM_AGENTS,
         scenario: str = "stable",
+        regime: str = "independent",
         seed: Optional[int] = None,
         rolling_window_size: int = 12,
-        topology: str = "ring"
+        topology: str = "ring",
+        ablation: str = "full",
     ):
+        if regime not in shared_config.REGIMES:
+            raise ValueError(f"Unknown regime {regime!r}")
         self.num_agents = num_agents
         self.agent_ids = [f"agent_{i}" for i in range(num_agents)]
         self.scenario = scenario
+        self.regime = regime
+        self.regime_cfg = dict(shared_config.REGIMES[regime])
+        self.ablation = ablation
         self.rolling_window_size = rolling_window_size
         self.energy_model = EnergyModel()
         self.timestep = 0
+        self.np_random = np.random.RandomState(shared_config.SEED)
 
-        # Spatial Sensor Topology Adjacency Matrix
-        # Ring topology: Agent 0 connected to 1 & 3; Agent 1 to 0 & 2; Agent 2 to 1 & 3; Agent 3 to 2 & 0
         if topology == "ring":
-            self.adjacency: Dict[str, list] = {
-                "agent_0": ["agent_1", "agent_3"],
-                "agent_1": ["agent_0", "agent_2"],
-                "agent_2": ["agent_1", "agent_3"],
-                "agent_3": ["agent_2", "agent_0"]
+            self.adjacency = {
+                aid: [self.agent_ids[(i - 1) % num_agents], self.agent_ids[(i + 1) % num_agents]]
+                for i, aid in enumerate(self.agent_ids)
             }
         else:
-            # Fully connected neighborhood fallback
             self.adjacency = {
                 aid: [other for other in self.agent_ids if other != aid]
                 for aid in self.agent_ids
             }
 
-        # Initialize underlying physical simulation per agent
+        reward_overrides: Dict[str, float] = {}
+        if ablation == "no_aoi":
+            reward_overrides["w_aoi"] = 0.0
+        if ablation == "no_energy":
+            reward_overrides["w_energy"] = 0.0
+
+        external_events = regime == "coordinated"
         self.agents: Dict[str, SingleAgentSensorEnv] = {
-            agent_id: SingleAgentSensorEnv(
+            aid: SingleAgentSensorEnv(
                 scenario=scenario,
-                energy_model=self.energy_model
+                energy_model=self.energy_model,
+                external_event_control=external_events,
+                reward_weights=reward_overrides,
             )
-            for agent_id in self.agent_ids
+            for aid in self.agent_ids
         }
-
-        # Rolling history of executed samples per agent for neighbor rate tracking
-        self.action_history: Dict[str, deque] = {
-            agent_id: deque(maxlen=self.rolling_window_size)
-            for agent_id in self.agent_ids
+        self.action_history = {
+            aid: deque(maxlen=rolling_window_size) for aid in self.agent_ids
         }
-
+        self.regional_event_strength = 0.0
         if seed is not None:
             self.seed(seed)
 
-    def seed(self, seed: Optional[int] = None):
-        """Seeds all agents deterministically."""
-        if seed is None:
-            seed = shared_config.SEED
-        random.seed(seed)
-        np.random.seed(seed)
-        for i, agent_id in enumerate(self.agent_ids):
-            self.agents[agent_id].seed(seed + i * 100)
+    @property
+    def coordination_enabled(self) -> bool:
+        return self.regime == "coordinated" and self.ablation != "no_coordination_constraint"
+
+    @property
+    def channel_capacity(self) -> int:
+        if not self.coordination_enabled:
+            return self.num_agents
+        return int(self.regime_cfg["channel_capacity"])
+
+    def seed(self, seed: Optional[int] = None) -> None:
+        seed = shared_config.SEED if seed is None else seed
+        self.np_random = np.random.RandomState(seed)
+        for i, aid in enumerate(self.agent_ids):
+            self.agents[aid].seed(seed + i * 100)
 
     def get_avail_actions(self) -> Dict[str, np.ndarray]:
-        """Returns action availability masks for all agents."""
-        return {
-            agent_id: self.agents[agent_id].get_action_mask()
-            for agent_id in self.agent_ids
-        }
+        return {aid: self.agents[aid].get_action_mask() for aid in self.agent_ids}
 
     def _get_neighbor_sampling_rate(self, agent_id: str) -> float:
-        """
-        Calculates recent sampling frequency of adjacent spatial neighbors.
-        Strictly preserves partial observability: does NOT expose neighbor battery or entropy.
-        """
+        if self.ablation == "no_neighbor_signal":
+            return 0.0
         neighbors = self.adjacency.get(agent_id, [])
-        if not neighbors:
-            return 0.0
+        total = sum(sum(self.action_history[n]) for n in neighbors)
+        slots = sum(len(self.action_history[n]) for n in neighbors)
+        return float(total / slots) if slots else 0.0
 
-        total_neighbor_samples = 0
-        total_slots = 0
-        for n_id in neighbors:
-            hist = self.action_history[n_id]
-            total_neighbor_samples += sum(hist)
-            total_slots += len(hist)
+    def _compose_obs(self, agent_id: str) -> np.ndarray:
+        local = self.agents[agent_id]._local_obs()
+        obs = np.array([
+            local[0],
+            local[1],
+            local[2],
+            self._get_neighbor_sampling_rate(agent_id),
+            local[3],
+        ], dtype=np.float32)
+        shared_config.validate_contracts(obs=obs)
+        return obs
 
-        if total_slots == 0:
-            return 0.0
+    def _advance_coordinated_events(self) -> None:
+        """Generate a persistent regional phenomenon plus weaker local events."""
+        persistence = float(self.regime_cfg.get("regional_event_persistence", 0.85))
+        arrival = float(self.regime_cfg.get("regional_event_probability", 0.06))
+        if self.regional_event_strength >= shared_config.BASELINE_RULE_ENTROPY_THRESHOLD:
+            if self.np_random.rand() < persistence:
+                self.regional_event_strength = max(0.62, self.regional_event_strength * 0.92)
+            else:
+                self.regional_event_strength = 0.0
+        elif self.np_random.rand() < arrival:
+            self.regional_event_strength = float(self.np_random.uniform(0.78, 1.0))
 
-        return float(np.clip(total_neighbor_samples / total_slots, 0.0, 1.0))
+        correlation = float(self.regime_cfg.get("spatial_event_correlation", 0.75))
+        base_local_p = shared_config.SCENARIOS[self.scenario]["event_frequency_lambda"]
+        for aid in self.agent_ids:
+            baseline = float(self.np_random.uniform(0.05, 0.18))
+            # Correlation controls how often a node shares the regional event,
+            # not the event amplitude. Scaling the amplitude by correlation
+            # previously pushed genuine regional events below the threshold.
+            regional = self.regional_event_strength if (
+                self.regional_event_strength > 0.0 and self.np_random.rand() < correlation
+            ) else 0.0
+            local_event = float(self.np_random.uniform(0.72, 1.0)) if (
+                self.np_random.rand() < base_local_p * (1.0 - correlation)
+            ) else 0.0
+            entropy = max(baseline, regional + self.np_random.normal(0.0, 0.06), local_event)
+            self.agents[aid].set_external_event_entropy(float(np.clip(entropy, 0.0, 1.0)))
 
-    def reset(self, seed: Optional[int] = None, options: Optional[dict] = None) -> Tuple[Dict[str, np.ndarray], Dict[str, Any]]:
-        """
-        Resets multi-agent environment and returns initial 3D observations.
-        """
+    def reset(
+        self,
+        seed: Optional[int] = None,
+        options: Optional[dict] = None,
+    ) -> Tuple[Dict[str, np.ndarray], Dict[str, Any]]:
         if seed is not None:
             self.seed(seed)
-
         self.timestep = 0
-        for agent_id in self.agent_ids:
-            self.action_history[agent_id].clear()
+        self.regional_event_strength = 0.0
+        for aid in self.agent_ids:
+            self.action_history[aid].clear()
+            sub_seed = (seed + int(aid.split("_")[1]) * 100) if seed is not None else None
+            self.agents[aid].reset(seed=sub_seed)
+        if self.regime == "coordinated":
+            self._advance_coordinated_events()
 
-        observations = {}
-        infos = {}
-
-        for i, agent_id in enumerate(self.agent_ids):
-            sub_seed = (seed + i * 100) if seed is not None else None
-            sa_obs, sa_info = self.agents[agent_id].reset(seed=sub_seed)
-
-            neighbor_rate = 0.0
-            obs_3d = np.array([sa_obs[0], sa_obs[1], neighbor_rate], dtype=np.float32)
-            shared_config.validate_contracts(obs=obs_3d)
-
-            observations[agent_id] = obs_3d
-            sa_info["neighbor_sampling_rate"] = neighbor_rate
-            sa_info["action_mask"] = self.agents[agent_id].get_action_mask()
-            infos[agent_id] = sa_info
-
+        observations = {aid: self._compose_obs(aid) for aid in self.agent_ids}
+        infos = {
+            aid: {
+                "timestep": 0,
+                "battery": self.agents[aid].battery,
+                "event_proxy": self.agents[aid].event_proxy,
+                "aoi": self.agents[aid].aoi,
+                "harvest_forecast": self.agents[aid].get_harvest_forecast(),
+                "measured_entropy": None,
+                "neighbor_sampling_rate": 0.0,
+                "action_mask": self.agents[aid].get_action_mask(),
+                "regime": self.regime,
+                "ablation": self.ablation,
+                "causal_observation": True,
+            }
+            for aid in self.agent_ids
+        }
         return observations, infos
 
-    def step(self, actions: Dict[str, int]) -> Tuple[Dict[str, np.ndarray], Dict[str, float], Dict[str, bool], Dict[str, bool], Dict[str, Any]]:
-        """
-        Executes one joint step across all 4 agents.
-        """
+    def _channel_winners(self, actions: Dict[str, int]) -> Tuple[set[str], set[str]]:
+        feasible = [
+            aid for aid in self.agent_ids
+            if actions[aid] == shared_config.ACTION_SAMPLE
+            and self.agents[aid].get_action_mask()[1] == 1
+        ]
+        if len(feasible) <= self.channel_capacity:
+            return set(feasible), set()
+        # Fair deterministic round-robin MAC priority. This is a network
+        # mechanism, not a reward manipulation, and avoids permanent ID bias.
+        start = self.timestep % self.num_agents
+        order = self.agent_ids[start:] + self.agent_ids[:start]
+        winners = {aid for aid in order if aid in feasible}
+        winners = set(list(aid for aid in order if aid in winners)[: self.channel_capacity])
+        return winners, set(feasible) - winners
+
+    def step(
+        self,
+        actions: Dict[str, int],
+    ) -> Tuple[
+        Dict[str, np.ndarray],
+        Dict[str, float],
+        Dict[str, bool],
+        Dict[str, bool],
+        Dict[str, Any],
+    ]:
+        if set(actions) != set(self.agent_ids):
+            raise ValueError("A joint action is required for every agent")
         self.timestep += 1
+        winners, channel_blocked = self._channel_winners(actions)
 
-        # Step 1: Execute single-agent physics and compute independent rewards
-        sa_results = {}
-        executed_samples: Dict[str, int] = {}
-
-        for agent_id in self.agent_ids:
-            action = actions[agent_id]
-            next_obs_2d, ind_reward, term, trunc, info = self.agents[agent_id].step(action)
-            is_sample_executed = 1 if info["sample_executed"] else 0
-
-            self.action_history[agent_id].append(is_sample_executed)
-            executed_samples[agent_id] = is_sample_executed
-
-            sa_results[agent_id] = {
-                "next_obs_2d": next_obs_2d,
-                "ind_reward": ind_reward,
-                "term": term,
-                "trunc": trunc,
-                "info": info,
-                "sample_executed": is_sample_executed
-            }
-
-        # Step 2: Compute joint spatial coordination & redundancy penalties
-        w_red = shared_config.REWARD_WEIGHTS["w_redundancy"]
-        observations = {}
-        rewards = {}
-        terminations = {}
-        truncations = {}
-        infos = {}
-
-        for agent_id in self.agent_ids:
-            res = sa_results[agent_id]
-            neighbors = self.adjacency.get(agent_id, [])
-
-            # Count how many immediate spatial neighbors also sampled simultaneously
-            co_samplers = sum(executed_samples[n_id] for n_id in neighbors)
-
-            if res["sample_executed"] == 1 and co_samplers > 0:
-                redundancy_penalty = w_red * co_samplers
+        results: Dict[str, Dict[str, Any]] = {}
+        executed: Dict[str, int] = {}
+        event_agents: set[str] = set()
+        for aid in self.agent_ids:
+            requested = int(actions[aid])
+            if requested == shared_config.ACTION_SAMPLE and aid in channel_blocked:
+                effective_action = shared_config.ACTION_SLEEP
             else:
-                redundancy_penalty = 0.0
+                effective_action = requested
+            _, reward, term, trunc, info = self.agents[aid].step(effective_action)
+            if info["is_high_entropy"]:
+                event_agents.add(aid)
+            is_delivered = int(info["sample_executed"] and aid not in channel_blocked)
+            executed[aid] = is_delivered
+            self.action_history[aid].append(is_delivered)
+            info["action_requested"] = requested
+            info["sample_requested"] = requested == shared_config.ACTION_SAMPLE
+            info["sample_delivered"] = bool(is_delivered)
+            info["channel_blocked"] = aid in channel_blocked
+            results[aid] = {"reward": reward, "term": term, "trunc": trunc, "info": info}
 
-            total_reward = res["ind_reward"] - redundancy_penalty
-            neighbor_rate = self._get_neighbor_sampling_rate(agent_id)
+        delivered_agents = {aid for aid, value in executed.items() if value}
+        covered_event_agents: set[str] = set()
+        for sampler in delivered_agents:
+            footprint = {sampler, *self.adjacency.get(sampler, [])}
+            covered_event_agents.update(footprint & event_agents)
+        coverage = len(covered_event_agents) / max(1, len(event_agents)) if event_agents else 1.0
 
-            obs_3d = np.array([res["next_obs_2d"][0], res["next_obs_2d"][1], neighbor_rate], dtype=np.float32)
-            shared_config.validate_contracts(obs=obs_3d)
+        if self.regime == "coordinated":
+            self._advance_coordinated_events()
 
-            observations[agent_id] = obs_3d
-            rewards[agent_id] = float(total_reward)
-            terminations[agent_id] = res["term"]
-            truncations[agent_id] = res["trunc"]
+        observations: Dict[str, np.ndarray] = {}
+        rewards: Dict[str, float] = {}
+        terminations: Dict[str, bool] = {}
+        truncations: Dict[str, bool] = {}
+        infos: Dict[str, Any] = {}
+        w = shared_config.REWARD_WEIGHTS
 
-            info = res["info"]
-            info["redundancy_penalty"] = redundancy_penalty
-            info["neighbor_co_samplers"] = co_samplers if res["sample_executed"] == 1 else 0
-            info["neighbor_sampling_rate"] = neighbor_rate
-            info["action_mask"] = self.agents[agent_id].get_action_mask()
-            infos[agent_id] = info
+        for aid in self.agent_ids:
+            info = results[aid]["info"]
+            neighbors = self.adjacency.get(aid, [])
+            co_samplers = sum(executed[n] for n in neighbors) if executed[aid] else 0
+            redundancy_penalty = 0.0
+            if self.coordination_enabled and self.ablation != "no_redundancy" and co_samplers:
+                redundancy_penalty = w["w_redundancy"] * co_samplers
+            contention_penalty = w["w_channel_contention"] if aid in channel_blocked else 0.0
+            coverage_bonus = (
+                w["w_coverage"] * coverage / self.num_agents
+                if self.coordination_enabled and event_agents
+                else 0.0
+            )
+
+            components = dict(info["reward_components"])
+            components.update({
+                "redundancy": -redundancy_penalty,
+                "channel_contention": -contention_penalty,
+                "coverage": coverage_bonus,
+            })
+            total_reward = results[aid]["reward"] - redundancy_penalty - contention_penalty + coverage_bonus
+
+            info.update({
+                "reward_components": components,
+                "redundancy_penalty": redundancy_penalty,
+                "neighbor_co_samplers": co_samplers,
+                "neighbor_sampling_rate": self._get_neighbor_sampling_rate(aid),
+                "network_coverage": coverage,
+                "regional_event_active": self.regional_event_strength >= shared_config.BASELINE_RULE_ENTROPY_THRESHOLD,
+                "channel_capacity": self.channel_capacity,
+                "action_mask": self.agents[aid].get_action_mask(),
+                "regime": self.regime,
+                "ablation": self.ablation,
+            })
+            observations[aid] = self._compose_obs(aid)
+            rewards[aid] = float(total_reward)
+            terminations[aid] = results[aid]["term"]
+            truncations[aid] = results[aid]["trunc"]
+            infos[aid] = info
 
         return observations, rewards, terminations, truncations, infos

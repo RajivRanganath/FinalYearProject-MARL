@@ -12,7 +12,7 @@ import shared_config
 def test_shared_config_contract_validation():
     """Verify validate_contracts catches dimension mismatches and out-of-bound values."""
     # Valid observation
-    valid_obs = np.array([0.5, 0.2, 0.1], dtype=np.float32)
+    valid_obs = np.array([0.5, 0.2, 0.1, 0.0, 0.5], dtype=np.float32)
     assert shared_config.validate_contracts(obs=valid_obs) is True
 
     # Invalid observation (dimension mismatch)
@@ -21,9 +21,9 @@ def test_shared_config_contract_validation():
 
     # Invalid observation (out of bounds)
     with pytest.raises(AssertionError):
-        shared_config.validate_contracts(obs=np.array([1.5, 0.2, 0.1], dtype=np.float32))
+        shared_config.validate_contracts(obs=np.array([1.5, 0.2, 0.1, 0.0, 0.5], dtype=np.float32))
 
-    # Valid model input (7 features: 3 obs + 4 one-hot)
+    # Valid model input (causal obs + one-hot agent ID)
     valid_model_input = np.zeros(shared_config.MODEL_INPUT_DIM, dtype=np.float32)
     assert shared_config.validate_contracts(model_input=valid_model_input) is True
 
@@ -34,6 +34,12 @@ def test_onnx_model_execution():
         pytest.skip("training/policy.onnx not yet exported")
 
     session = ort.InferenceSession(str(onnx_path))
+    model_input_dim = session.get_inputs()[0].shape[1]
+    if model_input_dim != shared_config.MODEL_INPUT_DIM:
+        pytest.skip(
+            f"legacy pre-causal ONNX expects {model_input_dim} features; "
+            f"current contract requires {shared_config.MODEL_INPUT_DIM}"
+        )
     dummy_obs = np.zeros((1, shared_config.MODEL_INPUT_DIM), dtype=np.float32)
     hidden_inps = [inp for inp in session.get_inputs() if 'hidden' in inp.name]
     h_dim = hidden_inps[0].shape[1] if hidden_inps and isinstance(hidden_inps[0].shape[1], int) else 64

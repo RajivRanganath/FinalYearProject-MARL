@@ -42,18 +42,22 @@ def export_agent_to_onnx(
     if not ckpt_file.exists():
         raise FileNotFoundError(f"Checkpoint agent weights not found at {ckpt_file}")
 
-    state_dict = torch.load(str(ckpt_file), map_location="cpu")
+    state_dict = torch.load(str(ckpt_file), map_location="cpu", weights_only=True)
     detected_hidden_dim = state_dict["fc1.weight"].shape[0] if "fc1.weight" in state_dict else hidden_dim
+    detected_use_rnn = "rnn.weight_ih" in state_dict
 
     args = SimpleNamespace(
         hidden_dim=detected_hidden_dim,
         rnn_hidden_dim=detected_hidden_dim,
         n_actions=shared_config.NUM_ACTIONS,
-        use_rnn=False
+        use_rnn=detected_use_rnn
     )
 
-    # Input shape: 3 (local obs) + 4 (one-hot agent ID) = 7
-    input_shape = shared_config.MODEL_INPUT_DIM
+    # Infer the exact training contract (full model or no-agent-ID ablation)
+    # from the checkpoint instead of hard-coding a stale dimension.
+    input_shape = int(state_dict["fc1.weight"].shape[1])
+    if input_shape not in (shared_config.MODEL_INPUT_DIM, shared_config.ENV_OBS_DIM):
+        raise ValueError(f"Unsupported checkpoint input dimension: {input_shape}")
     agent = RNNAgent(input_shape=input_shape, args=args)
     agent.load_state_dict(state_dict)
     agent.eval()
@@ -100,7 +104,8 @@ def export_agent_to_onnx(
         "checkpoint_source": str(ckpt_file),
         "output_onnx_path": str(out_file),
         "input_dim": input_shape,
-        "hidden_dim": hidden_dim,
+        "hidden_dim": detected_hidden_dim,
+        "use_rnn": detected_use_rnn,
         "output_dim": shared_config.NUM_ACTIONS,
         "total_parameters": param_count,
         "file_size_kb": round(file_size_kb, 2),

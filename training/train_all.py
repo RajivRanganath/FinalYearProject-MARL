@@ -1,152 +1,281 @@
-"""
-Multi-Algorithm & Multi-Seed Training Pipeline
-MARL Adaptive IoT Sampling Project
+"""Isolated, sanity-gated, multi-seed IQL/VDN/QMIX training pipeline."""
 
-Trains IQL, VDN, and QMIX algorithms across independent seeds with validation checkpointing:
-- Standardized hyperparameter configurations across algorithms
-- Structured JSON and CSV progress logging
-- Automated validation evaluation & model selection
-- Automatic ONNX export of best checkpoints
-"""
+from __future__ import annotations
 
-import os
-import sys
-import json
-import time
-import subprocess
 import argparse
-import numpy as np
+from datetime import datetime, timezone
+import json
 from pathlib import Path
-from typing import List, Dict, Any
+import shutil
+import subprocess
+import sys
+import time
+from typing import Any, Dict, Iterable, List, Optional
 
-# Cross-platform path setup
+import numpy as np
+
 ROOT_DIR = Path(__file__).resolve().parent.parent
-EPYMARL_SRC = Path(__file__).resolve().parent / "epymarl" / "src"
+EPYMARL_SRC = ROOT_DIR / "training" / "epymarl" / "src"
 MAIN_SCRIPT = EPYMARL_SRC / "main.py"
-
-for p in [str(ROOT_DIR), str(EPYMARL_SRC)]:
-    if p not in sys.path:
-        sys.path.append(p)
+for path in (ROOT_DIR, EPYMARL_SRC):
+    if str(path) not in sys.path:
+        sys.path.append(str(path))
 
 import shared_config
+from environment.pettingzoo_env import IoTSensorEnv
 from training.export_onnx import export_agent_to_onnx
+from training.policy_runtime import TorchCheckpointPolicy
+from training.sanity_checks import config_digest, run_sanity_checks
+
+
+def _git_sha() -> str:
+    result = subprocess.run(
+        ["git", "rev-parse", "HEAD"], cwd=ROOT_DIR, capture_output=True, text=True, check=False
+    )
+    return result.stdout.strip() or "unknown"
+
+
+def _git_dirty() -> bool:
+    result = subprocess.run(
+        ["git", "status", "--porcelain"], cwd=ROOT_DIR, capture_output=True, text=True, check=False
+    )
+    return bool(result.stdout.strip())
+
+
+def _evaluate_checkpoint(
+    checkpoint: Path,
+    scenario: str,
+    regime: str,
+    ablation: str,
+    seeds: Iterable[int],
+) -> Dict[str, Any]:
+    include_agent_id = ablation != "no_agent_id"
+    policy = TorchCheckpointPolicy(checkpoint, include_agent_id=include_agent_id)
+    returns, recalls, sample_fractions = [], [], []
+    action_counts = np.zeros(2, dtype=int)
+    for seed in seeds:
+        env = IoTSensorEnv(scenario=scenario, regime=regime, ablation=ablation, seed=seed)
+        obs, infos = env.reset(seed=seed)
+        policy.reset()
+        total_reward = 0.0
+        events = captures = samples = steps = 0
+        done = False
+        while not done:
+            actions = {}
+            for aid in env.possible_agents:
+                action = policy.select_action(aid, obs[aid], infos[aid])
+                actions[aid] = action
+                action_counts[action] += 1
+            obs, rewards, terms, truncs, infos = env.step(actions)
+            total_reward += sum(rewards.values())
+            events += sum(int(info["is_high_entropy"]) for info in infos.values())
+            captures += sum(int(info["is_high_entropy"] and info["sample_delivered"]) for info in infos.values())
+            samples += sum(int(info["sample_delivered"]) for info in infos.values())
+            steps += 1
+            done = all(terms.values()) or all(truncs.values())
+        returns.append(total_reward)
+        recalls.append(captures / max(1, events))
+        sample_fractions.append(samples / (steps * shared_config.NUM_AGENTS))
+    return {
+        "checkpoint": str(checkpoint),
+        "validation_seeds": list(seeds),
+        "mean_team_reward": float(np.mean(returns)),
+        "std_team_reward": float(np.std(returns, ddof=1)) if len(returns) > 1 else 0.0,
+        "mean_event_recall": float(np.mean(recalls)),
+        "mean_sample_fraction": float(np.mean(sample_fractions)),
+        "action_counts": action_counts.tolist(),
+        "chooses_both_actions": bool(np.all(action_counts > 0)),
+    }
+
+
+def _new_sacred_run(algorithm: str, map_name: str, before: set[Path]) -> Optional[Path]:
+    root = EPYMARL_SRC.parent / "results" / "sacred" / algorithm / map_name
+    candidates = set(path.parent for path in root.glob("*/run.json")) if root.exists() else set()
+    created = candidates - before
+    return max(created, key=lambda path: path.stat().st_mtime) if created else None
+
+
+def _sanity_gate(scenario: str, regime: str, supplied: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    report = supplied or run_sanity_checks(scenario, regime)
+    if not report["all_passed"]:
+        failed = [item["name"] for item in report["checks"] if not item["passed"]]
+        raise RuntimeError(f"Training blocked by failed sanity gates: {failed}")
+    expected = config_digest(scenario, regime)
+    if report["config_digest"] != expected:
+        raise RuntimeError("Sanity report/config digest mismatch")
+    return report
+
 
 def run_training_experiment(
-    algorithm: str = "qmix",
-    seed: int = 101,
-    t_max: int = 150000,
-    lr: float = 0.0005,
-    scenario: str = "stable"
+    algorithm: str,
+    seed: int,
+    t_max: int,
+    scenario: str = "volatile",
+    regime: str = "independent",
+    ablation: str = "full",
+    lr: float = 5e-4,
+    sanity_report: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
-    """
-    Executes an end-to-end training run using EPyMARL.
-    """
-    print(f"\n{'='*70}")
-    print(f"STARTING TRAINING RUN: Algorithm={algorithm.upper()} | Seed={seed} | T_max={t_max}")
-    print(f"{'='*70}\n")
+    if algorithm not in {"iql", "vdn", "qmix"}:
+        raise ValueError(f"Unsupported algorithm {algorithm}")
+    gate = _sanity_gate(scenario, regime, sanity_report)
+    run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S.%fZ")
+    run_dir = ROOT_DIR / "results" / "experiments" / regime / algorithm / f"seed{seed}" / run_id
+    run_dir.mkdir(parents=True, exist_ok=False)
+    map_name = f"iot_{regime}"
+    sacred_root = EPYMARL_SRC.parent / "results" / "sacred" / algorithm / map_name
+    sacred_before = set(path.parent for path in sacred_root.glob("*/run.json")) if sacred_root.exists() else set()
 
-    results_save_dir = ROOT_DIR / "results" / "models" / f"{algorithm}_seed{seed}"
-    results_save_dir.mkdir(parents=True, exist_ok=True)
-
+    save_interval = max(shared_config.EPISODE_LENGTH_TIMESTEPS, t_max // 4)
+    anneal = max(shared_config.EPISODE_LENGTH_TIMESTEPS, int(t_max * 0.6))
     cmd = [
-        sys.executable, str(MAIN_SCRIPT),
+        sys.executable,
+        str(MAIN_SCRIPT),
         f"--config={algorithm}",
         "--env-config=iot",
         "with",
         f"seed={seed}",
         f"t_max={t_max}",
         f"lr={lr}",
+        "use_cuda=False",
         "batch_size=16",
         "buffer_size=5000",
-        "epsilon_anneal_time=30000",
+        f"epsilon_anneal_time={anneal}",
         "epsilon_finish=0.05",
         "save_model=True",
-        "save_model_interval=25000",
-        f"local_results_path={str(results_save_dir)}"
+        f"save_model_interval={save_interval}",
+        f"test_interval={save_interval}",
+        f"env_args.scenario={scenario}",
+        f"env_args.regime={regime}",
+        f"env_args.ablation={ablation}",
+        f"env_args.map_name={map_name}",
+        f"obs_agent_id={'False' if ablation == 'no_agent_id' else 'True'}",
+        f"local_results_path={run_dir}",
     ]
-
-    start_time = time.time()
-    result = subprocess.run(cmd, cwd=str(ROOT_DIR))
-    elapsed_sec = time.time() - start_time
-
-    if result.returncode != 0:
-        print(f"Error: Training run for {algorithm} seed {seed} exited with code {result.returncode}")
-        return {"algorithm": algorithm, "seed": seed, "status": "FAILED", "elapsed_seconds": elapsed_sec}
-
-    # Locate saved checkpoints
-    models_dir = results_save_dir / "models"
-    latest_ckpt = None
-    if models_dir.exists():
-        # Find directory containing agent.th with highest numerical step
-        ckpts = [p for p in models_dir.glob("**/*") if (p / "agent.th").exists()]
-        ckpts.sort(key=lambda x: int(x.name) if x.name.isdigit() else (int(x.parent.name) if x.parent.name.isdigit() else 0), reverse=True)
-        if ckpts:
-            latest_ckpt = ckpts[0]
-
-    export_meta = None
-    if latest_ckpt is not None:
-        out_onnx = ROOT_DIR / "results" / "exported_models" / f"{algorithm}_seed{seed}.onnx"
-        try:
-            export_meta = export_agent_to_onnx(str(latest_ckpt), str(out_onnx))
-            # Also copy to primary policy.onnx if this is the designated primary policy
-            if algorithm == "qmix" and seed == shared_config.TRAIN_SEEDS[0]:
-                export_agent_to_onnx(str(latest_ckpt), str(ROOT_DIR / "training" / "policy.onnx"))
-        except Exception as e:
-            print(f"Warning: ONNX export failed for {latest_ckpt}: {e}")
-
-    summary = {
+    config_snapshot = {
         "algorithm": algorithm,
         "seed": seed,
         "t_max": t_max,
-        "lr": lr,
+        "learning_rate": lr,
         "scenario": scenario,
-        "status": "SUCCESS",
-        "elapsed_seconds": round(elapsed_sec, 2),
-        "checkpoint_path": str(latest_ckpt) if latest_ckpt else None,
-        "onnx_metadata": export_meta
+        "regime": regime,
+        "ablation": ablation,
+        "validation_seeds": shared_config.VAL_SEEDS,
+        "test_seeds_locked": shared_config.TEST_SEEDS,
+        "config_digest": gate["config_digest"],
+        "git_sha": _git_sha(),
+        "git_worktree_dirty": _git_dirty(),
+        "command": cmd,
+        "checkpoint_rule": "maximum mean team reward on validation seeds only",
     }
+    (run_dir / "config.json").write_text(json.dumps(config_snapshot, indent=2) + "\n")
+    (run_dir / "sanity_gate.json").write_text(json.dumps(gate, indent=2) + "\n")
 
-    log_path = ROOT_DIR / "results" / "training" / f"{algorithm}_seed{seed}_summary.json"
-    log_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(log_path, "w") as f:
-        json.dump(summary, f, indent=2)
+    print(f"\nTRAIN {algorithm.upper()} regime={regime} seed={seed} t_max={t_max}")
+    started = time.time()
+    process = subprocess.run(cmd, cwd=ROOT_DIR)
+    elapsed = time.time() - started
+    if process.returncode != 0:
+        summary = {**config_snapshot, "status": "FAILED", "elapsed_seconds": elapsed}
+        (run_dir / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")
+        return summary
 
+    checkpoint_root = run_dir / "models"
+    checkpoints = sorted(
+        [path for path in checkpoint_root.glob("**/*") if path.is_dir() and (path / "agent.th").exists()],
+        key=lambda path: int(path.name),
+    )
+    if not checkpoints:
+        raise RuntimeError(f"Training succeeded but no checkpoints were written under {checkpoint_root}")
+
+    decisions = [
+        _evaluate_checkpoint(path, scenario, regime, ablation, shared_config.VAL_SEEDS)
+        for path in checkpoints
+    ]
+    selected = max(decisions, key=lambda item: item["mean_team_reward"])
+    (run_dir / "checkpoint_validation.json").write_text(json.dumps(decisions, indent=2) + "\n")
+
+    # Ablations are first-class retrained policies.  Keep them outside the
+    # canonical model directory so a study can never overwrite the full model.
+    exported_dir = (
+        ROOT_DIR / "results" / "learned_models" / regime
+        if ablation == "full"
+        else ROOT_DIR / "results" / "ablation_models" / ablation / regime
+    )
+    exported_dir.mkdir(parents=True, exist_ok=True)
+    onnx_path = exported_dir / f"{algorithm}_seed{seed}.onnx"
+    export_metadata = export_agent_to_onnx(selected["checkpoint"], str(onnx_path))
+
+    sacred_run = _new_sacred_run(algorithm, map_name, sacred_before)
+    if sacred_run:
+        for name in ("metrics.json", "config.json", "run.json"):
+            source = sacred_run / name
+            if source.exists():
+                shutil.copy2(source, run_dir / f"sacred_{name}")
+
+    summary = {
+        **config_snapshot,
+        "status": "SUCCESS",
+        "elapsed_seconds": round(elapsed, 3),
+        "run_dir": str(run_dir),
+        "selected_checkpoint": selected,
+        "all_checkpoint_decisions": str(run_dir / "checkpoint_validation.json"),
+        "onnx": export_metadata,
+        "sacred_run": str(sacred_run) if sacred_run else None,
+    }
+    (run_dir / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")
     return summary
 
-def train_all_algorithms(
-    algorithms: List[str] = ["iql", "vdn", "qmix"],
-    seeds: List[int] = shared_config.TRAIN_SEEDS[:3],
-    t_max: int = 150000
+
+def train_suite(
+    algorithms: List[str],
+    seeds: List[int],
+    regimes: List[str],
+    t_max: int,
+    scenario: str,
+    ablation: str = "full",
 ) -> List[Dict[str, Any]]:
-    """
-    Runs multi-seed training across IQL, VDN, and QMIX.
-    """
-    all_summaries = []
-    for alg in algorithms:
-        for seed in seeds:
-            summ = run_training_experiment(algorithm=alg, seed=seed, t_max=t_max)
-            all_summaries.append(summ)
+    reports = {regime: _sanity_gate(scenario, regime) for regime in regimes}
+    summaries: List[Dict[str, Any]] = []
+    for regime in regimes:
+        for algorithm in algorithms:
+            for seed in seeds:
+                summaries.append(run_training_experiment(
+                    algorithm=algorithm,
+                    seed=seed,
+                    t_max=t_max,
+                    scenario=scenario,
+                    regime=regime,
+                    ablation=ablation,
+                    sanity_report=reports[regime],
+                ))
+    manifest = ROOT_DIR / "results" / "experiments" / f"training_manifest_{ablation}.json"
+    manifest.parent.mkdir(parents=True, exist_ok=True)
+    manifest.write_text(json.dumps(summaries, indent=2) + "\n")
+    return summaries
 
-    # Master training summary
-    master_log = ROOT_DIR / "results" / "training" / "master_training_summary.json"
-    with open(master_log, "w") as f:
-        json.dump(all_summaries, f, indent=2)
 
-    print("\n" + "=" * 70)
-    print("ALL TRAINING EXPERIMENTS COMPLETED SUCCESSFULLY!")
-    print(f"Master Summary Log: {master_log}")
-    print("=" * 70 + "\n")
-    return all_summaries
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--alg", default="all", choices=["iql", "vdn", "qmix", "all"])
+    parser.add_argument("--seed", type=int)
+    parser.add_argument("--seeds", default="101,102,103")
+    parser.add_argument("--regime", default="all", choices=["independent", "coordinated", "all"])
+    parser.add_argument("--scenario", default="volatile", choices=shared_config.SCENARIOS)
+    parser.add_argument("--ablation", default="full", choices=[
+        "full", "no_neighbor_signal", "no_redundancy", "no_aoi", "no_energy",
+        "no_agent_id", "no_coordination_constraint",
+    ])
+    parser.add_argument("--t_max", type=int, default=60000)
+    args = parser.parse_args()
+    algorithms = ["iql", "vdn", "qmix"] if args.alg == "all" else [args.alg]
+    seeds = [args.seed] if args.seed is not None else [int(value) for value in args.seeds.split(",")]
+    regimes = list(shared_config.REGIMES) if args.regime == "all" else [args.regime]
+    summaries = train_suite(algorithms, seeds, regimes, args.t_max, args.scenario, args.ablation)
+    failed = [item for item in summaries if item["status"] != "SUCCESS"]
+    if failed:
+        raise SystemExit(1)
+
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Train MARL policies for IoT sampling.")
-    parser.add_argument("--alg", type=str, default="qmix", choices=["iql", "vdn", "qmix", "all"], help="Algorithm to train")
-    parser.add_argument("--seed", type=int, default=101, help="Random seed for single run")
-    parser.add_argument("--t_max", type=int, default=150000, help="Total environment timesteps")
-    parser.add_argument("--lr", type=float, default=0.001, help="Learning rate")
-
-    args = parser.parse_args()
-    if args.alg == "all":
-        train_all_algorithms(t_max=args.t_max)
-    else:
-        run_training_experiment(algorithm=args.alg, seed=args.seed, t_max=args.t_max, lr=args.lr)
+    main()

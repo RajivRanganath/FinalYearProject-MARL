@@ -22,11 +22,11 @@ use_rnn: False
 
 # use the Q_Learner to train
 standardise_returns: False
-standardise_rewards: True
+standardise_rewards: False
 agent_output_type: "q"
 learner: "q_learner"
 double_q: True
-use_rnn: False
+use_rnn: True
 mixer: "vdn"
 
 name: "vdn"

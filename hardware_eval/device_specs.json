@@ -2,8 +2,8 @@
   "metadata": {
     "title": "Microcontroller Hardware Specification Database for TinyML MARL Deployment",
     "description": "Authoritative hardware specifications compiled from official manufacturer datasheets for Module C TinyML evaluation.",
-    "version": "1.0",
-    "date": "2026-08-17"
+    "version": "1.1",
+    "date": "2026-08-18"
   },
   "devices": {
     "ESP32": {
@@ -15,7 +15,7 @@
       "flash_mb": 4.0,
       "voltage_volts": 3.3,
       "active_current_ma": 160.0,
-      "sleep_current_ua": 15.0,
+      "sleep_current_ua": 5.0,
       "unit_cost_usd": 3.50,
       "native_simd_support": true,
       "simd_library": "ESP-NN (vectorized assembly kernels)",
@@ -24,7 +24,8 @@
       "cycles_per_int8_mac_optimistic": 2,
       "cycles_per_int8_mac_nominal": 4,
       "cycles_per_int8_mac_conservative": 8,
-      "datasheet_source": "Espressif Systems, 'ESP32 Series Datasheet', v4.4, 2024."
+      "datasheet_source": "Espressif Systems, 'ESP32 Series Datasheet', v4.4, 2024.",
+      "datasheet_url": "https://www.espressif.com/sites/default/files/documentation/esp32_datasheet_en.pdf"
     },
     "Bharat_Pi": {
       "name": "Bharat Pi Node (ESP32 Silicon Core)",
@@ -44,7 +45,8 @@
       "cycles_per_int8_mac_optimistic": 2,
       "cycles_per_int8_mac_nominal": 4,
       "cycles_per_int8_mac_conservative": 8,
-      "datasheet_source": "Bharat Pi IoT Board Specification Sheet, v2.1, 2023."
+      "datasheet_source": "Bharat Pi IoT Board Specification Sheet, v2.1, 2023.",
+      "datasheet_url": "https://bharatpi.net/docs/"
     },
     "RP2040": {
       "name": "Raspberry Pi Pico (RP2040)",
@@ -54,8 +56,8 @@
       "sram_kb": 264,
       "flash_mb": 2.0,
       "voltage_volts": 3.3,
-      "active_current_ma": 22.0,
-      "sleep_current_ua": 1300.0,
+      "active_current_ma": 20.0,
+      "sleep_current_ua": 390.0,
       "unit_cost_usd": 4.00,
       "native_simd_support": false,
       "simd_library": "None (Standard 32-bit ALU emulation)",
@@ -64,7 +66,8 @@
       "cycles_per_int8_mac_optimistic": 8,
       "cycles_per_int8_mac_nominal": 12,
       "cycles_per_int8_mac_conservative": 18,
-      "datasheet_source": "Raspberry Pi Foundation, 'RP2040 Datasheet: A microcontroller by Raspberry Pi', 2021."
+      "datasheet_source": "Raspberry Pi Foundation, 'RP2040 Datasheet: A microcontroller by Raspberry Pi', 2021.",
+      "datasheet_url": "https://datasheets.raspberrypi.com/rp2040/rp2040-datasheet.pdf"
     },
     "Arduino_Nano_33_BLE": {
       "name": "Arduino Nano 33 BLE Sense (Nordic nRF52840)",
@@ -84,7 +87,8 @@
       "cycles_per_int8_mac_optimistic": 1,
       "cycles_per_int8_mac_nominal": 2,
       "cycles_per_int8_mac_conservative": 4,
-      "datasheet_source": "Nordic Semiconductor, 'nRF52840 Product Specification', v1.3, 2021."
+      "datasheet_source": "Nordic Semiconductor, 'nRF52840 Product Specification', v1.3, 2021.",
+      "datasheet_url": "https://infocenter.nordicsemi.com/pdf/nRF52840_PS_v1.7.pdf"
     }
   }
 }

@@ -178,6 +178,59 @@ def _ablation_interpretation() -> str:
     )
 
 
+def _training_upgrade_section() -> str:
+    """Render the optional post-report upgrade strictly from saved artifacts."""
+    root = ROOT_DIR / "results" / "training_upgrade" / "coordinated"
+    manifest_path = ROOT_DIR / "results" / "upgrade_experiments" / "training_manifest_improved_full.json"
+    if not (root / "summary.csv").exists() or not manifest_path.exists():
+        return ""
+    summary = pd.read_csv(root / "summary.csv").set_index("policy")
+    comparisons = pd.read_csv(root / "paired_comparisons.csv")
+    manifest = json.loads(manifest_path.read_text())
+    validation = ", ".join(
+        f"seed {run['seed']}: {run['selected_checkpoint']['mean_team_reward']:.2f}"
+        for run in sorted(manifest, key=lambda item: item["seed"])
+    )
+    rows = [
+        "## Post-report validation-driven training upgrade\n\n",
+        "After the original benchmark was frozen, a separate training-only upgrade fixed terminal checkpoint loss, increased replay updates for 288-step episodes, and used the homogeneous shared-policy configuration supported by the earlier ablations. ",
+        "No environment physics, reward weight, baseline, or original test result was changed. The three selected validation rewards were ",
+        f"{validation}. Because seeds 1001--1030 had already informed the ablation analysis, the upgraded claim uses the predeclared fresh holdout 2001--2030.\n\n",
+        "| Policy | Reward [95% CI] | Recall [95% CI] | Energy [95% CI] | Mean AoI [95% CI] |\n",
+        "|---|---:|---:|---:|---:|\n",
+    ]
+    for policy in ("Published QMIX", "Upgraded QMIX", "Entropy Threshold"):
+        row = summary.loc[policy]
+        rows.append(
+            f"| {policy} | {row.raw_episode_reward_mean:.2f} "
+            f"[{row.raw_episode_reward_ci95_low:.2f}, {row.raw_episode_reward_ci95_high:.2f}] | "
+            f"{row.event_recall_mean:.3f} [{row.event_recall_ci95_low:.3f}, {row.event_recall_ci95_high:.3f}] | "
+            f"{row.total_energy_consumption_mean:.2f} "
+            f"[{row.total_energy_consumption_ci95_low:.2f}, {row.total_energy_consumption_ci95_high:.2f}] | "
+            f"{row.mean_aoi_mean:.2f} [{row.mean_aoi_ci95_low:.2f}, {row.mean_aoi_ci95_high:.2f}] |\n"
+        )
+    published_reward = comparisons[
+        (comparisons.comparator == "Published QMIX")
+        & (comparisons.metric == "raw_episode_reward")
+    ].iloc[0]
+    threshold_reward = comparisons[
+        (comparisons.comparator == "Entropy Threshold")
+        & (comparisons.metric == "raw_episode_reward")
+    ].iloc[0]
+    rows.extend([
+        "\nThe upgraded policy gains ",
+        f"{published_reward.upgraded_engineering_advantage_mean:.2f} paired reward units over published QMIX "
+        f"(95% CI {published_reward.upgraded_engineering_advantage_ci95_low:.2f} to "
+        f"{published_reward.upgraded_engineering_advantage_ci95_high:.2f}; "
+        f"p={published_reward.p_value:.2e}, dz={published_reward.paired_cohens_dz:.2f}). ",
+        "It nevertheless remains behind the causal threshold by ",
+        f"{-threshold_reward.upgraded_engineering_advantage_mean:.2f} reward units "
+        f"(p={threshold_reward.p_value:.2e}). The upgrade therefore strengthens QMIX substantially without changing the central negative-result conclusion. ",
+        "Full paired confidence intervals and effect sizes are in [the training-upgrade report](results/training_upgrade/coordinated/REPORT.md).\n\n",
+    ])
+    return "".join(rows)
+
+
 def build_report() -> Path:
     summaries: Dict[str, pd.DataFrame] = {
         regime: pd.read_csv(ROOT_DIR / "results" / "final" / regime / "benchmark_summary.csv")
@@ -205,6 +258,7 @@ def build_report() -> Path:
         f"{headline['coordinated']['best_learned'].policy} ({headline['coordinated']['best_learned'].raw_episode_reward_mean:.2f}) "
         f"versus the threshold policy ({headline['coordinated']['threshold'].raw_episode_reward_mean:.2f}). ",
         "The coordinated regime therefore created genuine inter-agent dependence, but not enough complexity for value decomposition to beat a well-aligned local proxy rule at this training budget and network scale.\n\n",
+        _training_upgrade_section(),
         "## 1. Research question and non-predetermined protocol\n\n",
         "The study asks when cooperative MARL provides an advantage over simple adaptive heuristics. It does not assume that QMIX should win. ",
         "Regime A uses independent event processes and unconstrained per-agent delivery. Regime B uses a two-packet shared channel, persistent spatially correlated events, ring-neighbor redundancy, heterogeneous energy trajectories, and network-coverage utility. ",

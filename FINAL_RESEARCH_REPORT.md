@@ -4,6 +4,18 @@
 
 No advantage from QMIX over the strongest causal adaptive heuristic was observed in either evaluated regime. The learned policies were repaired from an Always-Sleep collapse and all selected checkpoints demonstrably chose both actions, but the causal event-proxy threshold remained better on reward, event recall, energy use, and AoI. In the independent regime, the best learned policy was VDN (reward 9.50) versus the threshold policy (190.28). In the coordinated regime, the best learned policy was QMIX (24.38) versus the threshold policy (159.03). The coordinated regime therefore created genuine inter-agent dependence, but not enough complexity for value decomposition to beat a well-aligned local proxy rule at this training budget and network scale.
 
+## Post-report validation-driven training upgrade
+
+After the original benchmark was frozen, a separate training-only upgrade fixed terminal checkpoint loss, increased replay updates for 288-step episodes, and used the homogeneous shared-policy configuration supported by the earlier ablations. No environment physics, reward weight, baseline, or original test result was changed. The three selected validation rewards were seed 101: 127.12, seed 102: 123.35, seed 103: 121.57. Because seeds 1001--1030 had already informed the ablation analysis, the upgraded claim uses the predeclared fresh holdout 2001--2030.
+
+| Policy | Reward [95% CI] | Recall [95% CI] | Energy [95% CI] | Mean AoI [95% CI] |
+|---|---:|---:|---:|---:|
+| Published QMIX | 21.94 [6.64, 37.24] | 0.456 [0.438, 0.475] | 14.15 [13.84, 14.46] | 8.90 [8.62, 9.18] |
+| Upgraded QMIX | 123.18 [106.57, 139.80] | 0.567 [0.549, 0.585] | 12.98 [12.57, 13.40] | 5.33 [4.98, 5.68] |
+| Entropy Threshold | 168.22 [151.37, 185.07] | 0.607 [0.591, 0.623] | 11.20 [10.66, 11.74] | 5.56 [5.25, 5.87] |
+
+The upgraded policy gains 101.25 paired reward units over published QMIX (95% CI 93.36 to 109.13; p=9.25e-22, dz=4.79). It nevertheless remains behind the causal threshold by 45.04 reward units (p=2.23e-15). The upgrade therefore strengthens QMIX substantially without changing the central negative-result conclusion. Full paired confidence intervals and effect sizes are in [the training-upgrade report](results/training_upgrade/coordinated/REPORT.md).
+
 ## 1. Research question and non-predetermined protocol
 
 The study asks when cooperative MARL provides an advantage over simple adaptive heuristics. It does not assume that QMIX should win. Regime A uses independent event processes and unconstrained per-agent delivery. Regime B uses a two-packet shared channel, persistent spatially correlated events, ring-neighbor redundancy, heterogeneous energy trajectories, and network-coverage utility. The coupling mechanisms are physical or task-derived; they were not added after observing scores.

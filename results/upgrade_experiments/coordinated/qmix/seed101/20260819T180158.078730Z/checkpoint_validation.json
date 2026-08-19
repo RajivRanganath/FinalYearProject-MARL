@@ -1,0 +1,266 @@
+[
+  {
+    "checkpoint": "/Users/rajiv/Desktop/FinalYearProject-MARL/results/upgrade_experiments/coordinated/qmix/seed101/20260819T180158.078730Z/models/qmix_seed101_iot_coordinated_2026-08-19 23:31:59.737195/288",
+    "validation_seeds": [
+      201,
+      202,
+      203,
+      204,
+      205,
+      206,
+      207,
+      208,
+      209,
+      210
+    ],
+    "mean_team_reward": -349.9648666666652,
+    "std_team_reward": 53.73594704106352,
+    "mean_event_recall": 0.05273001213784073,
+    "mean_sample_fraction": 0.04383680555555555,
+    "action_counts": [
+      10719,
+      801
+    ],
+    "chooses_both_actions": true
+  },
+  {
+    "checkpoint": "/Users/rajiv/Desktop/FinalYearProject-MARL/results/upgrade_experiments/coordinated/qmix/seed101/20260819T180158.078730Z/models/qmix_seed101_iot_coordinated_2026-08-19 23:31:59.737195/18432",
+    "validation_seeds": [
+      201,
+      202,
+      203,
+      204,
+      205,
+      206,
+      207,
+      208,
+      209,
+      210
+    ],
+    "mean_team_reward": -157.65436666666704,
+    "std_team_reward": 54.52228369297767,
+    "mean_event_recall": 0.3398854609390432,
+    "mean_sample_fraction": 0.31571180555555556,
+    "action_counts": [
+      5039,
+      6481
+    ],
+    "chooses_both_actions": true
+  },
+  {
+    "checkpoint": "/Users/rajiv/Desktop/FinalYearProject-MARL/results/upgrade_experiments/coordinated/qmix/seed101/20260819T180158.078730Z/models/qmix_seed101_iot_coordinated_2026-08-19 23:31:59.737195/36576",
+    "validation_seeds": [
+      201,
+      202,
+      203,
+      204,
+      205,
+      206,
+      207,
+      208,
+      209,
+      210
+    ],
+    "mean_team_reward": 27.158099999999997,
+    "std_team_reward": 44.24462345464374,
+    "mean_event_recall": 0.47227050781018676,
+    "mean_sample_fraction": 0.23506944444444441,
+    "action_counts": [
+      8111,
+      3409
+    ],
+    "chooses_both_actions": true
+  },
+  {
+    "checkpoint": "/Users/rajiv/Desktop/FinalYearProject-MARL/results/upgrade_experiments/coordinated/qmix/seed101/20260819T180158.078730Z/models/qmix_seed101_iot_coordinated_2026-08-19 23:31:59.737195/54720",
+    "validation_seeds": [
+      201,
+      202,
+      203,
+      204,
+      205,
+      206,
+      207,
+      208,
+      209,
+      210
+    ],
+    "mean_team_reward": 88.58663333333331,
+    "std_team_reward": 41.306034846640166,
+    "mean_event_recall": 0.533897356822623,
+    "mean_sample_fraction": 0.21918402777777776,
+    "action_counts": [
+      8454,
+      3066
+    ],
+    "chooses_both_actions": true
+  },
+  {
+    "checkpoint": "/Users/rajiv/Desktop/FinalYearProject-MARL/results/upgrade_experiments/coordinated/qmix/seed101/20260819T180158.078730Z/models/qmix_seed101_iot_coordinated_2026-08-19 23:31:59.737195/72864",
+    "validation_seeds": [
+      201,
+      202,
+      203,
+      204,
+      205,
+      206,
+      207,
+      208,
+      209,
+      210
+    ],
+    "mean_team_reward": 117.14636666666665,
+    "std_team_reward": 30.293486482581855,
+    "mean_event_recall": 0.5614024049491928,
+    "mean_sample_fraction": 0.2109375,
+    "action_counts": [
+      8622,
+      2898
+    ],
+    "chooses_both_actions": true
+  },
+  {
+    "checkpoint": "/Users/rajiv/Desktop/FinalYearProject-MARL/results/upgrade_experiments/coordinated/qmix/seed101/20260819T180158.078730Z/models/qmix_seed101_iot_coordinated_2026-08-19 23:31:59.737195/91008",
+    "validation_seeds": [
+      201,
+      202,
+      203,
+      204,
+      205,
+      206,
+      207,
+      208,
+      209,
+      210
+    ],
+    "mean_team_reward": 112.00429999999997,
+    "std_team_reward": 31.951235544977248,
+    "mean_event_recall": 0.5582414145915922,
+    "mean_sample_fraction": 0.2210069444444444,
+    "action_counts": [
+      8490,
+      3030
+    ],
+    "chooses_both_actions": true
+  },
+  {
+    "checkpoint": "/Users/rajiv/Desktop/FinalYearProject-MARL/results/upgrade_experiments/coordinated/qmix/seed101/20260819T180158.078730Z/models/qmix_seed101_iot_coordinated_2026-08-19 23:31:59.737195/109152",
+    "validation_seeds": [
+      201,
+      202,
+      203,
+      204,
+      205,
+      206,
+      207,
+      208,
+      209,
+      210
+    ],
+    "mean_team_reward": 123.1004,
+    "std_team_reward": 31.561185035333647,
+    "mean_event_recall": 0.5695156811367943,
+    "mean_sample_fraction": 0.2171875,
+    "action_counts": [
+      8548,
+      2972
+    ],
+    "chooses_both_actions": true
+  },
+  {
+    "checkpoint": "/Users/rajiv/Desktop/FinalYearProject-MARL/results/upgrade_experiments/coordinated/qmix/seed101/20260819T180158.078730Z/models/qmix_seed101_iot_coordinated_2026-08-19 23:31:59.737195/127296",
+    "validation_seeds": [
+      201,
+      202,
+      203,
+      204,
+      205,
+      206,
+      207,
+      208,
+      209,
+      210
+    ],
+    "mean_team_reward": 123.58556666666667,
+    "std_team_reward": 34.46007860600579,
+    "mean_event_recall": 0.5693736863289127,
+    "mean_sample_fraction": 0.21701388888888892,
+    "action_counts": [
+      8554,
+      2966
+    ],
+    "chooses_both_actions": true
+  },
+  {
+    "checkpoint": "/Users/rajiv/Desktop/FinalYearProject-MARL/results/upgrade_experiments/coordinated/qmix/seed101/20260819T180158.078730Z/models/qmix_seed101_iot_coordinated_2026-08-19 23:31:59.737195/145440",
+    "validation_seeds": [
+      201,
+      202,
+      203,
+      204,
+      205,
+      206,
+      207,
+      208,
+      209,
+      210
+    ],
+    "mean_team_reward": 123.11466666666665,
+    "std_team_reward": 35.48624503614649,
+    "mean_event_recall": 0.569954486705728,
+    "mean_sample_fraction": 0.22204861111111113,
+    "action_counts": [
+      8495,
+      3025
+    ],
+    "chooses_both_actions": true
+  },
+  {
+    "checkpoint": "/Users/rajiv/Desktop/FinalYearProject-MARL/results/upgrade_experiments/coordinated/qmix/seed101/20260819T180158.078730Z/models/qmix_seed101_iot_coordinated_2026-08-19 23:31:59.737195/163584",
+    "validation_seeds": [
+      201,
+      202,
+      203,
+      204,
+      205,
+      206,
+      207,
+      208,
+      209,
+      210
+    ],
+    "mean_team_reward": 126.47426666666664,
+    "std_team_reward": 34.394076665884874,
+    "mean_event_recall": 0.5738297472101545,
+    "mean_sample_fraction": 0.2203993055555556,
+    "action_counts": [
+      8512,
+      3008
+    ],
+    "chooses_both_actions": true
+  },
+  {
+    "checkpoint": "/Users/rajiv/Desktop/FinalYearProject-MARL/results/upgrade_experiments/coordinated/qmix/seed101/20260819T180158.078730Z/models/qmix_seed101_iot_coordinated_2026-08-19 23:31:59.737195/180288",
+    "validation_seeds": [
+      201,
+      202,
+      203,
+      204,
+      205,
+      206,
+      207,
+      208,
+      209,
+      210
+    ],
+    "mean_team_reward": 127.12079999999999,
+    "std_team_reward": 33.62914953539673,
+    "mean_event_recall": 0.5750647946828019,
+    "mean_sample_fraction": 0.22161458333333334,
+    "action_counts": [
+      8494,
+      3026
+    ],
+    "chooses_both_actions": true
+  }
+]

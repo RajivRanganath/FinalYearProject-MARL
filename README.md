@@ -6,6 +6,8 @@ This project asks a deliberately neutral research question:
 
 The final experiments do not force QMIX to win. After repairing a learned-policy collapse and removing an entropy oracle from the decision-time observation, IQL, VDN, and QMIX all learn non-trivial SAMPLE/SLEEP policies. Nevertheless, a causal low-power event-proxy threshold outperforms the learned methods in both evaluated regimes. In the coordinated regime QMIX has the strongest learned-policy reward point estimate, but it still does not beat the strongest heuristic on the recall-energy-AoI trade-off.
 
+A subsequent validation-driven training upgrade fixes terminal checkpoint loss, adds replay updates for the long 288-step episodes, and uses a homogeneous shared policy without the harmful lagged-neighbor input. On a fresh predeclared 30-seed holdout (`2001`--`2030`), coordinated QMIX improves from 21.94 to 123.18 mean reward, recall from 0.456 to 0.567, energy from 14.15 to 12.98, and mean AoI from 8.90 to 5.33. The causal threshold still leads on reward (168.22), recall (0.607), and energy (11.20), so the upgraded result remains scientifically negative rather than forcing QMIX to win. See [the training-upgrade report](results/training_upgrade/coordinated/REPORT.md).
+
 The complete measured result, confidence intervals, paired tests, ablations, limitations, and negative-result interpretation are in [FINAL_RESEARCH_REPORT.md](FINAL_RESEARCH_REPORT.md).
 
 ## Scientific design
@@ -77,3 +79,14 @@ hardware_eval/               separate analytical TinyML feasibility tooling
 - Reward components, actions, Q-gaps, trajectories, and checkpoint decisions are saved rather than inferred from headline scores.
 
 See [LIMITATIONS.md](LIMITATIONS.md) before making field-deployment or general MARL claims.
+
+## Validation-driven training upgrade
+
+The historical `baseline` profile remains available unchanged. The upgraded coordinated QMIX run is isolated under `results/upgrade_*` and does not overwrite the published Phase 25--33 artifacts:
+
+```bash
+venv/bin/python training/train_all.py --profile improved --alg qmix --seeds 101,102,103 --regime coordinated --scenario volatile
+venv/bin/python deployment/evaluate_training_upgrade.py --regime coordinated --scenario volatile --n-seeds 30
+```
+
+Profile selection and checkpoint selection use validation seeds `201`--`210`. Because the original test set had already informed the ablation analysis, upgraded claims use the separately declared seeds `2001`--`2030`.

@@ -167,6 +167,10 @@ SEED: int = 42
 TRAIN_SEEDS = [101, 102, 103, 104, 105]
 VAL_SEEDS = [201, 202, 203, 204, 205, 206, 207, 208, 209, 210]
 TEST_SEEDS = list(range(1001, 1031))  # 30 deterministic held-out test seeds
+# Fresh holdout declared before the validation-driven training upgrade.  The
+# original 1001--1030 benchmark has already informed the published ablation
+# analysis and must not be reused to claim an unbiased upgraded result.
+UPGRADE_TEST_SEEDS = list(range(2001, 2031))
 
 # -----------------------------------------------------------------------------
 # 9. Contract Validation Assertion Helper

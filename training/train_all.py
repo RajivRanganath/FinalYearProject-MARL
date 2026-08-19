@@ -26,6 +26,7 @@ from environment.pettingzoo_env import IoTSensorEnv
 from training.export_onnx import export_agent_to_onnx
 from training.policy_runtime import TorchCheckpointPolicy
 from training.sanity_checks import config_digest, run_sanity_checks
+from training.training_profiles import PROFILES, get_training_profile
 
 
 def _git_sha() -> str:
@@ -48,8 +49,9 @@ def _evaluate_checkpoint(
     regime: str,
     ablation: str,
     seeds: Iterable[int],
+    include_agent_id: bool = True,
+    mask_neighbor_signal: bool = False,
 ) -> Dict[str, Any]:
-    include_agent_id = ablation != "no_agent_id"
     policy = TorchCheckpointPolicy(checkpoint, include_agent_id=include_agent_id)
     returns, recalls, sample_fractions = [], [], []
     action_counts = np.zeros(2, dtype=int)
@@ -63,7 +65,10 @@ def _evaluate_checkpoint(
         while not done:
             actions = {}
             for aid in env.possible_agents:
-                action = policy.select_action(aid, obs[aid], infos[aid])
+                decision_obs = np.asarray(obs[aid], dtype=np.float32).copy()
+                if mask_neighbor_signal:
+                    decision_obs[shared_config.STATE_INDEX_NEIGHBOR_SAMPLING_RATE] = 0.0
+                action = policy.select_action(aid, decision_obs, infos[aid])
                 actions[aid] = action
                 action_counts[action] += 1
             obs, rewards, terms, truncs, infos = env.step(actions)
@@ -113,21 +118,33 @@ def run_training_experiment(
     scenario: str = "volatile",
     regime: str = "independent",
     ablation: str = "full",
-    lr: float = 5e-4,
+    lr: Optional[float] = None,
+    profile: str = "baseline",
     sanity_report: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     if algorithm not in {"iql", "vdn", "qmix"}:
         raise ValueError(f"Unsupported algorithm {algorithm}")
+    settings = get_training_profile(profile)
+    effective_lr = settings.learning_rate if lr is None else lr
+    include_agent_id = settings.include_agent_id and ablation != "no_agent_id"
+    mask_neighbor_signal = settings.mask_neighbor_signal or ablation == "no_neighbor_signal"
     gate = _sanity_gate(scenario, regime, sanity_report)
     run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S.%fZ")
-    run_dir = ROOT_DIR / "results" / "experiments" / regime / algorithm / f"seed{seed}" / run_id
+    experiment_root = "experiments" if profile == "baseline" else "upgrade_experiments"
+    run_dir = ROOT_DIR / "results" / experiment_root / regime / algorithm / f"seed{seed}" / run_id
     run_dir.mkdir(parents=True, exist_ok=False)
     map_name = f"iot_{regime}"
     sacred_root = EPYMARL_SRC.parent / "results" / "sacred" / algorithm / map_name
     sacred_before = set(path.parent for path in sacred_root.glob("*/run.json")) if sacred_root.exists() else set()
 
-    save_interval = max(shared_config.EPISODE_LENGTH_TIMESTEPS, t_max // 4)
-    anneal = max(shared_config.EPISODE_LENGTH_TIMESTEPS, int(t_max * 0.6))
+    save_interval = max(
+        shared_config.EPISODE_LENGTH_TIMESTEPS,
+        t_max // settings.checkpoint_count,
+    )
+    anneal = max(
+        shared_config.EPISODE_LENGTH_TIMESTEPS,
+        int(t_max * settings.epsilon_anneal_fraction),
+    )
     cmd = [
         sys.executable,
         str(MAIN_SCRIPT),
@@ -136,32 +153,45 @@ def run_training_experiment(
         "with",
         f"seed={seed}",
         f"t_max={t_max}",
-        f"lr={lr}",
+        f"lr={effective_lr}",
+        f"gamma={settings.gamma}",
         "use_cuda=False",
-        "batch_size=16",
-        "buffer_size=5000",
+        f"batch_size={settings.batch_size}",
+        f"buffer_size={settings.buffer_size}",
+        f"hidden_dim={settings.hidden_dim}",
+        f"updates_per_episode={settings.updates_per_episode}",
+        f"target_update_interval_or_tau={settings.target_update_interval_or_tau}",
         f"epsilon_anneal_time={anneal}",
-        "epsilon_finish=0.05",
+        f"epsilon_finish={settings.epsilon_finish}",
         "save_model=True",
         f"save_model_interval={save_interval}",
         f"test_interval={save_interval}",
         f"env_args.scenario={scenario}",
         f"env_args.regime={regime}",
         f"env_args.ablation={ablation}",
+        f"env_args.mask_neighbor_signal={mask_neighbor_signal}",
         f"env_args.map_name={map_name}",
-        f"obs_agent_id={'False' if ablation == 'no_agent_id' else 'True'}",
+        f"obs_agent_id={include_agent_id}",
         f"local_results_path={run_dir}",
     ]
     config_snapshot = {
         "algorithm": algorithm,
         "seed": seed,
         "t_max": t_max,
-        "learning_rate": lr,
+        "profile": profile,
+        "training_profile": settings.to_dict(),
+        "learning_rate": effective_lr,
+        "include_agent_id": include_agent_id,
+        "mask_neighbor_signal": mask_neighbor_signal,
         "scenario": scenario,
         "regime": regime,
         "ablation": ablation,
         "validation_seeds": shared_config.VAL_SEEDS,
-        "test_seeds_locked": shared_config.TEST_SEEDS,
+        "test_seeds_locked": (
+            shared_config.TEST_SEEDS
+            if profile == "baseline"
+            else shared_config.UPGRADE_TEST_SEEDS
+        ),
         "config_digest": gate["config_digest"],
         "git_sha": _git_sha(),
         "git_worktree_dirty": _git_dirty(),
@@ -189,7 +219,15 @@ def run_training_experiment(
         raise RuntimeError(f"Training succeeded but no checkpoints were written under {checkpoint_root}")
 
     decisions = [
-        _evaluate_checkpoint(path, scenario, regime, ablation, shared_config.VAL_SEEDS)
+        _evaluate_checkpoint(
+            path,
+            scenario,
+            regime,
+            ablation,
+            shared_config.VAL_SEEDS,
+            include_agent_id=include_agent_id,
+            mask_neighbor_signal=mask_neighbor_signal,
+        )
         for path in checkpoints
     ]
     selected = max(decisions, key=lambda item: item["mean_team_reward"])
@@ -197,11 +235,14 @@ def run_training_experiment(
 
     # Ablations are first-class retrained policies.  Keep them outside the
     # canonical model directory so a study can never overwrite the full model.
-    exported_dir = (
-        ROOT_DIR / "results" / "learned_models" / regime
-        if ablation == "full"
-        else ROOT_DIR / "results" / "ablation_models" / ablation / regime
-    )
+    if profile != "baseline":
+        exported_dir = ROOT_DIR / "results" / "upgrade_models" / profile / regime
+    else:
+        exported_dir = (
+            ROOT_DIR / "results" / "learned_models" / regime
+            if ablation == "full"
+            else ROOT_DIR / "results" / "ablation_models" / ablation / regime
+        )
     exported_dir.mkdir(parents=True, exist_ok=True)
     onnx_path = exported_dir / f"{algorithm}_seed{seed}.onnx"
     export_metadata = export_agent_to_onnx(selected["checkpoint"], str(onnx_path))
@@ -234,6 +275,8 @@ def train_suite(
     t_max: int,
     scenario: str,
     ablation: str = "full",
+    profile: str = "baseline",
+    lr: Optional[float] = None,
 ) -> List[Dict[str, Any]]:
     reports = {regime: _sanity_gate(scenario, regime) for regime in regimes}
     summaries: List[Dict[str, Any]] = []
@@ -247,12 +290,49 @@ def train_suite(
                     scenario=scenario,
                     regime=regime,
                     ablation=ablation,
+                    profile=profile,
+                    lr=lr,
                     sanity_report=reports[regime],
                 ))
-    manifest = ROOT_DIR / "results" / "experiments" / f"training_manifest_{ablation}.json"
-    manifest.parent.mkdir(parents=True, exist_ok=True)
-    manifest.write_text(json.dumps(summaries, indent=2) + "\n")
+    write_training_manifest(summaries, profile=profile, ablation=ablation)
     return summaries
+
+
+def _merge_training_summaries(
+    existing: List[Dict[str, Any]], new: List[Dict[str, Any]]
+) -> List[Dict[str, Any]]:
+    """Replace matching replicas while retaining other completed suite seeds."""
+    keyed: Dict[tuple, Dict[str, Any]] = {}
+    for item in [*existing, *new]:
+        key = (
+            item.get("profile", "baseline"),
+            item.get("ablation", "full"),
+            item.get("regime"),
+            item.get("algorithm"),
+            item.get("seed"),
+        )
+        keyed[key] = item
+    return [keyed[key] for key in sorted(keyed, key=lambda value: tuple(map(str, value)))]
+
+
+def write_training_manifest(
+    summaries: List[Dict[str, Any]], profile: str, ablation: str
+) -> Path:
+    manifest_root = ROOT_DIR / "results" / (
+        "experiments" if profile == "baseline" else "upgrade_experiments"
+    )
+    manifest_name = (
+        f"training_manifest_{ablation}.json"
+        if profile == "baseline"
+        else f"training_manifest_{profile}_{ablation}.json"
+    )
+    manifest = manifest_root / manifest_name
+    manifest.parent.mkdir(parents=True, exist_ok=True)
+    output = summaries
+    if profile != "baseline" and manifest.exists():
+        output = _merge_training_summaries(json.loads(manifest.read_text()), summaries)
+    manifest.write_text(json.dumps(output, indent=2) + "\n")
+    return manifest
 
 
 def main() -> None:
@@ -266,12 +346,24 @@ def main() -> None:
         "full", "no_neighbor_signal", "no_redundancy", "no_aoi", "no_energy",
         "no_agent_id", "no_coordination_constraint",
     ])
-    parser.add_argument("--t_max", type=int, default=60000)
+    parser.add_argument("--profile", default="baseline", choices=sorted(PROFILES))
+    parser.add_argument("--lr", type=float, help="Override the selected profile learning rate")
+    parser.add_argument("--t_max", type=int)
     args = parser.parse_args()
     algorithms = ["iql", "vdn", "qmix"] if args.alg == "all" else [args.alg]
     seeds = [args.seed] if args.seed is not None else [int(value) for value in args.seeds.split(",")]
     regimes = list(shared_config.REGIMES) if args.regime == "all" else [args.regime]
-    summaries = train_suite(algorithms, seeds, regimes, args.t_max, args.scenario, args.ablation)
+    t_max = args.t_max or get_training_profile(args.profile).recommended_t_max
+    summaries = train_suite(
+        algorithms,
+        seeds,
+        regimes,
+        t_max,
+        args.scenario,
+        args.ablation,
+        profile=args.profile,
+        lr=args.lr,
+    )
     failed = [item for item in summaries if item["status"] != "SUCCESS"]
     if failed:
         raise SystemExit(1)

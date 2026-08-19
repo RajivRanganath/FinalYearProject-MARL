@@ -201,16 +201,20 @@ def run_sequential(args, logger):
         buffer.insert_episode_batch(episode_batch)
 
         if buffer.can_sample(args.batch_size):
-            episode_sample = buffer.sample(args.batch_size)
+            # Long 288-step episodes otherwise yield very few optimiser steps.
+            # The multiplier is explicit in the saved config and defaults to 1
+            # for exact backward compatibility.
+            for _ in range(args.updates_per_episode):
+                episode_sample = buffer.sample(args.batch_size)
 
-            # Truncate batch to only filled timesteps
-            max_ep_t = episode_sample.max_t_filled()
-            episode_sample = episode_sample[:, :max_ep_t]
+                # Truncate batch to only filled timesteps
+                max_ep_t = episode_sample.max_t_filled()
+                episode_sample = episode_sample[:, :max_ep_t]
 
-            if episode_sample.device != args.device:
-                episode_sample.to(args.device)
+                if episode_sample.device != args.device:
+                    episode_sample.to(args.device)
 
-            learner.train(episode_sample, runner.t_env, episode)
+                learner.train(episode_sample, runner.t_env, episode)
 
         # Execute test runs once in a while
         n_test_runs = max(1, args.test_nepisode // runner.batch_size)
@@ -262,6 +266,17 @@ def run_sequential(args, logger):
             logger.log_stat("episode", episode, runner.t_env)
             logger.print_recent_stats()
             last_log_T = runner.t_env
+
+    # Interval-only saving previously discarded the tail of every run (for the
+    # 60k protocol the newest selectable checkpoint was at 46,080 steps).  The
+    # terminal learner state must always participate in validation selection.
+    if args.save_model and runner.t_env != model_save_time:
+        save_path = os.path.join(
+            args.local_results_path, "models", args.unique_token, str(runner.t_env)
+        )
+        os.makedirs(save_path, exist_ok=True)
+        logger.console_logger.info("Saving final models to {}".format(save_path))
+        learner.save_models(save_path)
 
     runner.close_env()
     logger.console_logger.info("Finished Training")

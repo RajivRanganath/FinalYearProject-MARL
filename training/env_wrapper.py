@@ -36,6 +36,7 @@ class IoTSensorEnvWrapper(MultiAgentEnv):
         regime = kwargs.get("regime", "independent")
         ablation = kwargs.get("ablation", "full")
         seed = kwargs.get("seed", shared_config.SEED)
+        self.mask_neighbor_signal = bool(kwargs.get("mask_neighbor_signal", False))
         
         self.env = IoTSensorEnv(scenario=scenario, regime=regime, ablation=ablation, seed=seed)
         self.scenario = scenario
@@ -98,11 +99,19 @@ class IoTSensorEnvWrapper(MultiAgentEnv):
 
     def get_obs(self) -> List[np.ndarray]:
         """Returns causal local observations for each agent."""
-        return [self._obs[f"agent_{i}"] for i in range(self.n_agents)]
+        return [self._policy_obs(self._obs[f"agent_{i}"]) for i in range(self.n_agents)]
 
     def get_obs_agent(self, agent_id: int) -> np.ndarray:
         """Returns 3D local observation for specified agent index."""
-        return self._obs[f"agent_{agent_id}"]
+        return self._policy_obs(self._obs[f"agent_{agent_id}"])
+
+    def _policy_obs(self, obs: np.ndarray) -> np.ndarray:
+        """Apply a declared training-only input mask without changing physics."""
+        if not self.mask_neighbor_signal:
+            return obs
+        masked = np.asarray(obs, dtype=np.float32).copy()
+        masked[shared_config.STATE_INDEX_NEIGHBOR_SAMPLING_RATE] = 0.0
+        return masked
 
     def get_obs_size(self) -> int:
         """Returns the configured local observation size."""

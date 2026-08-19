@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 from datetime import datetime, timezone
+import hashlib
 import json
 from pathlib import Path
 import shutil
@@ -13,6 +14,7 @@ import time
 from typing import Any, Dict, Iterable, List, Optional
 
 import numpy as np
+import torch
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 EPYMARL_SRC = ROOT_DIR / "training" / "epymarl" / "src"
@@ -27,6 +29,7 @@ from training.export_onnx import export_agent_to_onnx
 from training.policy_runtime import TorchCheckpointPolicy
 from training.sanity_checks import config_digest, run_sanity_checks
 from training.training_profiles import PROFILES, get_training_profile
+from training.refined_protocol import REFINED_FINAL_SEEDS
 
 
 def _git_sha() -> str:
@@ -111,6 +114,115 @@ def _sanity_gate(scenario: str, regime: str, supplied: Optional[Dict[str, Any]] 
     return report
 
 
+def _resume_checkpoint_root(
+    resume_profile: str,
+    regime: str,
+    algorithm: str,
+    seed: int,
+    scenario: str = "volatile",
+    expected_config_digest: Optional[str] = None,
+) -> tuple[Path, int]:
+    """Resolve a completed run without silently choosing by test performance."""
+    root = ROOT_DIR / "results" / "upgrade_experiments"
+    manifest = root / f"training_manifest_{resume_profile}_full.json"
+    if not manifest.exists():
+        raise FileNotFoundError(f"Resume manifest not found: {manifest}")
+    matches = [
+        item for item in json.loads(manifest.read_text())
+        if item.get("status") == "SUCCESS"
+        and item.get("profile") == resume_profile
+        and item.get("regime") == regime
+        and item.get("scenario") == scenario
+        and item.get("algorithm") == algorithm
+        and item.get("seed") == seed
+        and item.get("ablation", "full") == "full"
+        and (
+            expected_config_digest is None
+            or item.get("config_digest") == expected_config_digest
+        )
+    ]
+    if len(matches) != 1:
+        raise RuntimeError(
+            f"Expected exactly one completed {resume_profile}/{regime}/{algorithm}/seed{seed} "
+            f"manifest entry, found {len(matches)}"
+        )
+    selected = Path(matches[0]["selected_checkpoint"]["checkpoint"])
+    if not selected.is_absolute():
+        selected = ROOT_DIR / selected
+    checkpoint_root = selected.parent
+    required = {"agent.th", "opt.th"}
+    if algorithm in {"vdn", "qmix"}:
+        required.add("mixer.th")
+    missing = sorted(name for name in required if not (selected / name).is_file())
+    if missing:
+        raise FileNotFoundError(
+            f"Selected resume checkpoint is incomplete ({', '.join(missing)} missing): {selected}"
+        )
+    return checkpoint_root, int(selected.name)
+
+
+TRAINING_SOURCE_FILES = (
+    "training/train_all.py",
+    "training/training_profiles.py",
+    "training/sanity_checks.py",
+    "training/epymarl/src/learners/q_learner.py",
+    "training/epymarl/src/controllers/basic_controller.py",
+    "training/epymarl/src/runners/episode_runner.py",
+    "training/epymarl/src/modules/agents/rnn_agent.py",
+    "training/epymarl/src/modules/mixers/qmix.py",
+    "training/epymarl/src/modules/mixers/vdn.py",
+)
+
+
+def _training_source_digest() -> Dict[str, str]:
+    """Fingerprint the code that defines training semantics, not just the SHA."""
+    return {
+        relative: _sha256(ROOT_DIR / relative)
+        for relative in TRAINING_SOURCE_FILES
+        if (ROOT_DIR / relative).is_file()
+    }
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _optimizer_learning_rates(checkpoint: Path) -> List[float]:
+    state = torch.load(checkpoint / "opt.th", map_location="cpu", weights_only=True)
+    groups = state.get("param_groups", [])
+    rates = [float(group["lr"]) for group in groups if "lr" in group]
+    if not rates:
+        raise RuntimeError(f"No optimizer learning rate found in {checkpoint / 'opt.th'}")
+    return rates
+
+
+def _portable_path(path: Path) -> str:
+    try:
+        return str(path.resolve().relative_to(ROOT_DIR.resolve()))
+    except ValueError:
+        return str(path.resolve())
+
+
+def _export_directory(
+    profile: str, scenario: str, regime: str, ablation: str
+) -> Path:
+    """Keep historical volatile/full paths while isolating every other contract."""
+    if profile != "baseline":
+        base = ROOT_DIR / "results" / "upgrade_models" / profile
+        if scenario == "volatile" and ablation == "full":
+            return base / regime
+        return base / scenario / regime / ablation
+    if ablation == "full":
+        base = ROOT_DIR / "results" / "learned_models"
+        return base / regime if scenario == "volatile" else base / scenario / regime
+    base = ROOT_DIR / "results" / "ablation_models" / ablation
+    return base / regime if scenario == "volatile" else base / scenario / regime
+
+
 def run_training_experiment(
     algorithm: str,
     seed: int,
@@ -120,6 +232,7 @@ def run_training_experiment(
     ablation: str = "full",
     lr: Optional[float] = None,
     profile: str = "baseline",
+    resume_profile: Optional[str] = None,
     sanity_report: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     if algorithm not in {"iql", "vdn", "qmix"}:
@@ -128,7 +241,33 @@ def run_training_experiment(
     effective_lr = settings.learning_rate if lr is None else lr
     include_agent_id = settings.include_agent_id and ablation != "no_agent_id"
     mask_neighbor_signal = settings.mask_neighbor_signal or ablation == "no_neighbor_signal"
+    resume_root: Optional[Path] = None
+    resume_step: Optional[int] = None
     gate = _sanity_gate(scenario, regime, sanity_report)
+    if resume_profile is not None:
+        source_settings = get_training_profile(resume_profile)
+        if (
+            source_settings.include_agent_id != settings.include_agent_id
+            or source_settings.mask_neighbor_signal != settings.mask_neighbor_signal
+            or source_settings.hidden_dim != settings.hidden_dim
+        ):
+            raise ValueError("Resume profile must preserve input masking, agent identity, and hidden size")
+        if ablation != "full":
+            raise ValueError("Automatic profile continuation currently supports only the full model")
+        resume_root, resume_step = _resume_checkpoint_root(
+            resume_profile,
+            regime,
+            algorithm,
+            seed,
+            scenario=scenario,
+            expected_config_digest=gate["config_digest"],
+        )
+        if t_max <= resume_step:
+            raise ValueError(
+                f"Continuation t_max={t_max} must be greater than source step {resume_step}"
+            )
+    source_git_sha = _git_sha()
+    source_git_dirty = _git_dirty()
     run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S.%fZ")
     experiment_root = "experiments" if profile == "baseline" else "upgrade_experiments"
     run_dir = ROOT_DIR / "results" / experiment_root / regime / algorithm / f"seed{seed}" / run_id
@@ -174,6 +313,8 @@ def run_training_experiment(
         f"obs_agent_id={include_agent_id}",
         f"local_results_path={run_dir}",
     ]
+    if resume_root is not None:
+        cmd.extend([f"checkpoint_path={resume_root}", f"load_step={resume_step}"])
     config_snapshot = {
         "algorithm": algorithm,
         "seed": seed,
@@ -190,11 +331,45 @@ def run_training_experiment(
         "test_seeds_locked": (
             shared_config.TEST_SEEDS
             if profile == "baseline"
-            else shared_config.UPGRADE_TEST_SEEDS
+            else (
+                shared_config.V2_TEST_SEEDS
+                if profile in {"improved_v2", "extended"}
+                else (
+                    REFINED_FINAL_SEEDS
+                    if profile == "refined"
+                    else shared_config.UPGRADE_TEST_SEEDS
+                )
+            )
         ),
         "config_digest": gate["config_digest"],
-        "git_sha": _git_sha(),
-        "git_worktree_dirty": _git_dirty(),
+        "git_sha": source_git_sha,
+        "git_worktree_dirty": source_git_dirty,
+        # ``git_sha`` alone cannot identify the code that ran, because these
+        # runs are launched from a disclosed dirty worktree.  Hash the learner
+        # and launcher sources directly so a later audit can tell which
+        # training semantics produced a checkpoint instead of inferring it from
+        # file modification times.
+        "training_source_sha256": _training_source_digest(),
+        "resume_profile": resume_profile,
+        "resume_checkpoint_root": str(resume_root) if resume_root else None,
+        "resume_checkpoint_step": resume_step,
+        "resume_checkpoint_sha256": (
+            {
+                name: _sha256(resume_root / str(resume_step) / name)
+                for name in sorted(
+                    {"agent.th", "opt.th"}
+                    | ({"mixer.th"} if algorithm in {"vdn", "qmix"} else set())
+                )
+            }
+            if resume_root is not None and resume_step is not None
+            else None
+        ),
+        "continuation_semantics": (
+            "checkpoint warm-start with restored online weights and optimizer moments; "
+            "fresh replay buffer, target-network bootstrap, learner counters, and RNG stream"
+            if resume_root is not None
+            else None
+        ),
         "command": cmd,
         "checkpoint_rule": "maximum mean team reward on validation seeds only",
     }
@@ -203,7 +378,23 @@ def run_training_experiment(
 
     print(f"\nTRAIN {algorithm.upper()} regime={regime} seed={seed} t_max={t_max}")
     started = time.time()
-    process = subprocess.run(cmd, cwd=ROOT_DIR)
+    try:
+        process = subprocess.run(cmd, cwd=ROOT_DIR)
+    except KeyboardInterrupt:
+        elapsed = time.time() - started
+        summary = {**config_snapshot, "status": "ABORTED", "elapsed_seconds": round(elapsed, 3)}
+        (run_dir / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")
+        raise
+    except Exception as exc:
+        elapsed = time.time() - started
+        summary = {
+            **config_snapshot,
+            "status": "LAUNCH_FAILED",
+            "elapsed_seconds": round(elapsed, 3),
+            "error": f"{type(exc).__name__}: {exc}",
+        }
+        (run_dir / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")
+        return summary
     elapsed = time.time() - started
     if process.returncode != 0:
         summary = {**config_snapshot, "status": "FAILED", "elapsed_seconds": elapsed}
@@ -216,7 +407,14 @@ def run_training_experiment(
         key=lambda path: int(path.name),
     )
     if not checkpoints:
-        raise RuntimeError(f"Training succeeded but no checkpoints were written under {checkpoint_root}")
+        summary = {
+            **config_snapshot,
+            "status": "POSTPROCESS_FAILED",
+            "elapsed_seconds": round(elapsed, 3),
+            "error": f"Training succeeded but no checkpoints were written under {checkpoint_root}",
+        }
+        (run_dir / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")
+        return summary
 
     decisions = [
         _evaluate_checkpoint(
@@ -231,18 +429,31 @@ def run_training_experiment(
         for path in checkpoints
     ]
     selected = max(decisions, key=lambda item: item["mean_team_reward"])
+    selected_path = Path(selected["checkpoint"])
+    selected_lrs = _optimizer_learning_rates(selected_path)
+    selected["optimizer_learning_rates"] = selected_lrs
+    selected["optimizer_lr_matches_config"] = bool(
+        all(np.isclose(value, effective_lr, rtol=0.0, atol=1e-12) for value in selected_lrs)
+    )
     (run_dir / "checkpoint_validation.json").write_text(json.dumps(decisions, indent=2) + "\n")
+    if not selected["optimizer_lr_matches_config"]:
+        summary = {
+            **config_snapshot,
+            "status": "POSTPROCESS_FAILED",
+            "elapsed_seconds": round(elapsed, 3),
+            "error": (
+                f"Selected checkpoint optimizer LR {selected_lrs} does not match "
+                f"configured LR {effective_lr}"
+            ),
+            "run_dir": _portable_path(run_dir),
+            "selected_checkpoint": selected,
+        }
+        (run_dir / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")
+        return summary
 
     # Ablations are first-class retrained policies.  Keep them outside the
     # canonical model directory so a study can never overwrite the full model.
-    if profile != "baseline":
-        exported_dir = ROOT_DIR / "results" / "upgrade_models" / profile / regime
-    else:
-        exported_dir = (
-            ROOT_DIR / "results" / "learned_models" / regime
-            if ablation == "full"
-            else ROOT_DIR / "results" / "ablation_models" / ablation / regime
-        )
+    exported_dir = _export_directory(profile, scenario, regime, ablation)
     exported_dir.mkdir(parents=True, exist_ok=True)
     onnx_path = exported_dir / f"{algorithm}_seed{seed}.onnx"
     export_metadata = export_agent_to_onnx(selected["checkpoint"], str(onnx_path))
@@ -258,7 +469,7 @@ def run_training_experiment(
         **config_snapshot,
         "status": "SUCCESS",
         "elapsed_seconds": round(elapsed, 3),
-        "run_dir": str(run_dir),
+        "run_dir": _portable_path(run_dir),
         "selected_checkpoint": selected,
         "all_checkpoint_decisions": str(run_dir / "checkpoint_validation.json"),
         "onnx": export_metadata,
@@ -276,6 +487,7 @@ def train_suite(
     scenario: str,
     ablation: str = "full",
     profile: str = "baseline",
+    resume_profile: Optional[str] = None,
     lr: Optional[float] = None,
 ) -> List[Dict[str, Any]]:
     reports = {regime: _sanity_gate(scenario, regime) for regime in regimes}
@@ -283,7 +495,7 @@ def train_suite(
     for regime in regimes:
         for algorithm in algorithms:
             for seed in seeds:
-                summaries.append(run_training_experiment(
+                summary = run_training_experiment(
                     algorithm=algorithm,
                     seed=seed,
                     t_max=t_max,
@@ -291,10 +503,14 @@ def train_suite(
                     regime=regime,
                     ablation=ablation,
                     profile=profile,
+                    resume_profile=resume_profile,
                     lr=lr,
                     sanity_report=reports[regime],
-                ))
-    write_training_manifest(summaries, profile=profile, ablation=ablation)
+                )
+                summaries.append(summary)
+                # Persist each terminal result immediately.  A later failure or
+                # interrupt must not erase evidence from completed replicas.
+                write_training_manifest([summary], profile=profile, ablation=ablation)
     return summaries
 
 
@@ -307,9 +523,11 @@ def _merge_training_summaries(
         key = (
             item.get("profile", "baseline"),
             item.get("ablation", "full"),
+            item.get("scenario", "volatile"),
             item.get("regime"),
             item.get("algorithm"),
             item.get("seed"),
+            item.get("config_digest"),
         )
         keyed[key] = item
     return [keyed[key] for key in sorted(keyed, key=lambda value: tuple(map(str, value)))]
@@ -329,7 +547,7 @@ def write_training_manifest(
     manifest = manifest_root / manifest_name
     manifest.parent.mkdir(parents=True, exist_ok=True)
     output = summaries
-    if profile != "baseline" and manifest.exists():
+    if manifest.exists():
         output = _merge_training_summaries(json.loads(manifest.read_text()), summaries)
     manifest.write_text(json.dumps(output, indent=2) + "\n")
     return manifest
@@ -347,6 +565,11 @@ def main() -> None:
         "no_agent_id", "no_coordination_constraint",
     ])
     parser.add_argument("--profile", default="baseline", choices=sorted(PROFILES))
+    parser.add_argument(
+        "--resume-profile",
+        choices=sorted(PROFILES),
+        help="Resume each replica from that profile's validation-selected checkpoint",
+    )
     parser.add_argument("--lr", type=float, help="Override the selected profile learning rate")
     parser.add_argument("--t_max", type=int)
     args = parser.parse_args()
@@ -362,6 +585,7 @@ def main() -> None:
         args.scenario,
         args.ablation,
         profile=args.profile,
+        resume_profile=args.resume_profile,
         lr=args.lr,
     )
     failed = [item for item in summaries if item["status"] != "SUCCESS"]

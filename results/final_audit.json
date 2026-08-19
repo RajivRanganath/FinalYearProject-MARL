@@ -60,9 +60,34 @@
       "name": "sanity_gates",
       "passed": true,
       "evidence": [
-        "7c0bec2f79ae2307",
-        "c4b603208648f457"
+        "ae510abba91917cb",
+        "6834240e8e625a6c"
       ]
+    },
+    {
+      "name": "sanity_digest_matches_current_source",
+      "passed": true,
+      "evidence": {
+        "recorded": {
+          "independent": "ae510abba91917cb",
+          "coordinated": "6834240e8e625a6c"
+        },
+        "recomputed": {
+          "independent": "ae510abba91917cb",
+          "coordinated": "6834240e8e625a6c"
+        }
+      }
+    },
+    {
+      "name": "environment_drift_disclosed",
+      "passed": true,
+      "evidence": {
+        "disclosure_record": "results/environment_drift.json",
+        "manifest_digests": [
+          "c4b603208648f457"
+        ],
+        "undeclared_digests": []
+      }
     },
     {
       "name": "full_training_matrix",
@@ -189,9 +214,14 @@
       "evidence": "FINAL_RESEARCH_REPORT.md"
     },
     {
-      "name": "provenance_archive",
+      "name": "provenance_hashes",
       "passed": true,
-      "evidence": "results/provenance.json"
+      "evidence": {
+        "passed": true,
+        "checked_files": 231,
+        "missing": [],
+        "mismatched": {}
+      }
     }
   ]
 }

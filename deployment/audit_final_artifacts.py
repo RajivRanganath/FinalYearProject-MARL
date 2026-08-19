@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 from pathlib import Path
 import sys
 from typing import Any, Dict, List
@@ -15,6 +16,42 @@ if str(ROOT_DIR) not in sys.path:
     sys.path.append(str(ROOT_DIR))
 
 import shared_config
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def verify_provenance(path: Path) -> Dict[str, Any]:
+    """Re-hash every declared file instead of trusting archive existence."""
+    payload = json.loads(path.read_text())
+    missing: List[str] = []
+    mismatched: Dict[str, Dict[str, str]] = {}
+    checked = 0
+    for section in ("source_sha256", "primary_artifact_sha256"):
+        for relative, expected in payload.get(section, {}).items():
+            # The audit writes this file itself, so including it would create a
+            # self-invalidating provenance cycle in historical archives.
+            if relative == "results/final_audit.json":
+                continue
+            target = ROOT_DIR / relative
+            if not target.is_file():
+                missing.append(relative)
+                continue
+            actual = _sha256(target)
+            checked += 1
+            if actual != expected:
+                mismatched[relative] = {"expected": expected, "actual": actual}
+    return {
+        "passed": not missing and not mismatched,
+        "checked_files": checked,
+        "missing": sorted(missing),
+        "mismatched": mismatched,
+    }
 
 
 def audit() -> Path:
@@ -42,6 +79,52 @@ def audit() -> Path:
         for regime in ("independent", "coordinated")
     ]
     check("sanity_gates", all(item["all_passed"] for item in sanity), [item["config_digest"] for item in sanity])
+
+    # A passing gate artifact proves nothing if the environment source moved
+    # after the gate ran, so recompute the digest instead of trusting the
+    # stored one.  This is the check whose absence let an environment repair
+    # land silently underneath a complete set of published results.
+    from training.sanity_checks import config_digest
+
+    recomputed = {
+        regime: config_digest("volatile", regime)
+        for regime in ("independent", "coordinated")
+    }
+    recorded = {item["regime"]: item["config_digest"] for item in sanity}
+    check(
+        "sanity_digest_matches_current_source",
+        recomputed == recorded,
+        {"recorded": recorded, "recomputed": recomputed},
+    )
+
+    # Historical manifests legitimately carry pre-repair digests.  That is
+    # allowed only while it stays declared, so the audit fails if drift appears
+    # that the disclosure record does not already name.
+    drift_path = ROOT_DIR / "results" / "environment_drift.json"
+    manifest_digests = set()
+    for manifest_path in sorted(
+        (ROOT_DIR / "results" / "upgrade_experiments").glob("training_manifest_*.json")
+    ):
+        for item in json.loads(manifest_path.read_text()):
+            if item.get("config_digest"):
+                manifest_digests.add(item["config_digest"])
+    if drift_path.is_file():
+        drift = json.loads(drift_path.read_text())
+        declared = set(drift.get("config_digest_drift", {}).get("legacy", {}).values())
+        declared |= set(drift.get("config_digest_drift", {}).get("current", {}).values())
+    else:
+        drift = None
+        declared = set()
+    undeclared = sorted(manifest_digests - set(recomputed.values()) - declared)
+    check(
+        "environment_drift_disclosed",
+        drift is not None and not undeclared,
+        {
+            "disclosure_record": str(drift_path.relative_to(ROOT_DIR)) if drift is not None else None,
+            "manifest_digests": sorted(manifest_digests),
+            "undeclared_digests": undeclared,
+        },
+    )
 
     full = json.loads((ROOT_DIR / "results" / "experiments" / "training_manifest_full.json").read_text())
     check(
@@ -131,7 +214,12 @@ def audit() -> Path:
     figures = sorted((ROOT_DIR / "results" / "figures").glob("[0-9][0-9]_*.png"))
     check("thirteen_final_figures", len(figures) == 13, [path.name for path in figures])
     check("final_report", (ROOT_DIR / "FINAL_RESEARCH_REPORT.md").exists(), "FINAL_RESEARCH_REPORT.md")
-    check("provenance_archive", (ROOT_DIR / "results" / "provenance.json").exists(), "results/provenance.json")
+    provenance_path = ROOT_DIR / "results" / "provenance.json"
+    if provenance_path.is_file():
+        provenance = verify_provenance(provenance_path)
+        check("provenance_hashes", provenance["passed"], provenance)
+    else:
+        check("provenance_hashes", False, {"missing": ["results/provenance.json"]})
 
     report = {"all_passed": all(item["passed"] for item in checks), "checks": checks}
     output = ROOT_DIR / "results" / "final_audit.json"

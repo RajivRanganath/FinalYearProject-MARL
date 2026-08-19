@@ -23,6 +23,7 @@ if str(ROOT_DIR) not in sys.path:
 from hardware_eval.memory_estimator import evaluate_memory_footprint
 from hardware_eval.latency_estimator import estimate_inference_latencies
 from hardware_eval.energy_estimator import evaluate_hardware_energy
+from hardware_eval.model_analysis import analyze_marl_policy
 
 # Sourced Scoring Weights
 WEIGHTS = {
@@ -141,13 +142,13 @@ def generate_hardware_report_markdown(output_path: str = "hardware_eval/final_ha
     eng_rep = evaluate_hardware_energy()
 
     md = []
-    md.append("# Module C: TinyML Microcontroller Hardware Evaluation Report\n")
+    md.append("# Module C: Analytical TinyML Hardware Estimate (Not Deployment Validation)\n")
     md.append("**Project:** Multi-Agent Reinforcement Learning for Adaptive IoT Energy-Harvesting Sampling\n")
-    md.append("**Evaluation Methodology:** Sourced Specification Modeling, Post-Training Int8 Quantization, and Multi-Criteria Decision Matrix.\n")
+    md.append("**Evaluation Methodology:** graph-derived model accounting plus specification-based estimates. No microcontroller conversion, build, timing, or power measurement has been completed.\n")
     md.append("---\n\n")
 
-    md.append("## 1. Executive Summary & Ranked Recommendation\n\n")
-    md.append("To determine the most viable microcontroller platform for deploying Module B's trained decentralized MARL policy, candidate hardware targets were evaluated across memory feasibility, estimated inference latency, electrical energy expenditure per decision, unit economics, and TinyML runtime maturity.\n\n")
+    md.append("## 1. Provisional Device Scoring Under Stored Assumptions\n\n")
+    md.append("This is a provisional ranking under explicit analytical assumptions for the three-replica v3 ensemble. It must not be read as proof that the recurrent graph is supported or deployable on any listed device.\n\n")
 
     md.append("| Rank | Candidate Device | Composite Score (0–100) | Nominal Latency | Energy / Inference | Unit Cost | Primary Strength |\n")
     md.append("| :---: | :--- | :---: | :---: | :---: | :---: | :--- |\n")
@@ -156,7 +157,7 @@ def generate_hardware_report_markdown(output_path: str = "hardware_eval/final_ha
         md.append(f"| **#{r['rank']}** | **{r['device_name']}** | **{r['composite_score']}** | {raw['nominal_latency_ms']} ms | {raw['energy_per_inference_uj']} µJ | ${raw['unit_cost_usd']:.2f} | {r['justification']} |\n")
 
     md.append("\n---\n\n")
-    md.append("## 2. Hardware Specification Database & Sources\n\n")
+    md.append("## 2. Stored Hardware Specifications (Source Refresh Required)\n\n")
     md.append("All device specifications are sourced from authoritative manufacturer datasheets:\n\n")
     md.append("- **ESP32 (Espressif ESP32-WROOM-32)**: Xtensa dual-core LX6 @ 240 MHz, 520 KB SRAM, 4 MB Flash, active current 160 mA, deep sleep 15 µA. Source: *Espressif Systems ESP32 Series Datasheet v4.4, 2024*.\n")
     md.append("- **Bharat Pi (ESP32 Silicon Core)**: Xtensa dual-core LX6 @ 240 MHz, 520 KB SRAM, 4 MB Flash, active current 170 mA, deep sleep 20 µA. Source: *Bharat Pi IoT Board Specification Sheet v2.1, 2023*.\n")
@@ -164,13 +165,20 @@ def generate_hardware_report_markdown(output_path: str = "hardware_eval/final_ha
     md.append("- **Arduino Nano 33 BLE Sense (Nordic nRF52840)**: Arm Cortex-M4F @ 64 MHz, 256 KB SRAM, 1 MB Flash, active current 15 mA, deep sleep 5 µA. Source: *Nordic Semiconductor nRF52840 Product Specification v1.3, 2021*.\n\n")
 
     md.append("---\n\n")
-    md.append("## 3. Memory Footprint & Feasibility Analysis\n\n")
-    md.append("| Device | Available SRAM | Required SRAM (TFLM + Arena) | SRAM Utilization | Available Flash | Flash Utilization | Feasibility Status |\n")
+    md.append("## 3. Analytical Memory-Bound Estimate\n\n")
+    md.append("| Device | Available SRAM | Assumed runtime + lower-bound working SRAM | SRAM Utilization | Available Flash | Flash Utilization | Status |\n")
     md.append("| :--- | :---: | :---: | :---: | :---: | :---: | :---: |\n")
     for k, v in mem_rep.items():
         md.append(f"| {v['device_name']} | {v['available_sram_kb']} KB | {v['required_sram_kb']} KB | {v['sram_utilization_pct']}% | {v['available_flash_kb']} KB | {v['flash_utilization_pct']}% | **{v['feasibility_notes']}** |\n")
 
-    md.append("\n> **Memory Conclusion**: All 4 candidate devices successfully fit the Int8 quantized model (~17.8 KB weights) and TFLite Micro tensor arena (~16.3 KB SRAM). The ESP32 and Bharat Pi provide the highest SRAM headroom (>500 KB free).\n\n")
+    stats = analyze_marl_policy()
+    md.append(
+        "\n> **Memory boundary**: the three recurrent replicas contain "
+        f"{stats['total_parameters']:,} parameters and project to "
+        f"{stats['projected_int8_weight_memory_kb']:.2f} KB of Int8 weights. "
+        "The table uses an assumed runtime overhead and an activation lower bound; "
+        "actual tensor-arena size and operator support remain unverified.\n\n"
+    )
 
     md.append("---\n\n")
     md.append("## 4. Latency & Energy-Per-Inference Breakdown\n\n")
@@ -182,8 +190,27 @@ def generate_hardware_report_markdown(output_path: str = "hardware_eval/final_ha
 
     md.append("\n### Key Scientific Finding: Energy Return on Investment (ROI)\n")
     md.append("- A full IoT sample action (sensing + MCU active + RF transmission) consumes **~14,030 µJ (14.03 mJ)**.\n")
-    md.append("- Executing one MARL policy inference consumes only **15.4 µJ to 149.7 µJ** (< 1.1% of a sample action).\n")
-    md.append("- Therefore, **every single unnecessary sample avoided by the RL policy saves over 90x to 900x more energy than the inference itself costs**, proving the net positive energy feasibility of edge RL on microcontrollers.\n")
+    projected = [value["energy_per_inference_microjoules"] for value in eng_rep.values()]
+    md.append(
+        f"- The specification model projects **{min(projected):.2f} µJ to "
+        f"{max(projected):.2f} µJ** per three-replica decision.\n"
+    )
+    md.append("- These are projections, not measured energy. A target build and board-level power trace are required before claiming net-positive edge deployment.\n")
+
+    quant_path = ROOT_DIR / "hardware_eval" / "quantization_report.json"
+    if quant_path.is_file():
+        quant = json.loads(quant_path.read_text())
+        if quant.get("status") == "ONNX_RUNTIME_DYNAMIC_QUANTIZATION_VERIFIED":
+            md.append("\n---\n\n## 5. Host ONNX Quantization Check\n\n")
+            md.append(
+                "One Extended replica was dynamically quantized for ONNX Runtime on the host. "
+                f"Serialized size changed from {quant['float32_serialized_size_kb']:.2f} KB "
+                f"to {quant['int8_serialized_size_kb']:.2f} KB ({quant['compression_ratio']:.2f}x), "
+                f"with {quant['action_concordance_percentage']:.2f}% action agreement over "
+                f"{quant['test_samples_evaluated']:,} synthetic recurrent inputs. "
+                "This is numerical host evidence for one replica, not a converted microcontroller "
+                "binary, whole-ensemble validation, or measured device performance.\n"
+            )
 
     report_text = "".join(md)
     with open(output_path, "w") as f:

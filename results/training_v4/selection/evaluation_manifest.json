@@ -1,0 +1,52 @@
+{
+  "split": "selection",
+  "environment_seeds": [
+    251,
+    252,
+    253,
+    254,
+    255,
+    256,
+    257,
+    258,
+    259,
+    260,
+    261,
+    262,
+    263,
+    264,
+    265,
+    266,
+    267,
+    268,
+    269,
+    270
+  ],
+  "git_sha": "2d920fa26d1781341a1f260b7d8309fadb134d87",
+  "git_worktree_dirty": true,
+  "model_fingerprints": {
+    "results/upgrade_models/extended/coordinated/qmix_seed101.onnx": "fda77e1c4fb2fb2c20dc073a3b4c31c62cbcf7ed40d07b6870bbeed06adb99c8",
+    "results/upgrade_models/extended/coordinated/qmix_seed101.onnx.data": "432a5b07307149cfc4a7a17de428dd184a6287b9aaee385842c1006f850ffcba",
+    "results/upgrade_models/extended/coordinated/qmix_seed102.onnx": "533538e9cb7800eca069abeacfc3549116da3dcc73d0e5d9f426a46baf188e6b",
+    "results/upgrade_models/extended/coordinated/qmix_seed102.onnx.data": "9b7cbc19e93073d7c70aca31ff32fdcfa90e4437fd90a26d6bea42ad1e75b5d3",
+    "results/upgrade_models/extended/coordinated/qmix_seed103.onnx": "8f782ba5597b7b379c2947ccc0f525726ab3944c26766f7390dc0418935663a5",
+    "results/upgrade_models/extended/coordinated/qmix_seed103.onnx.data": "d488ab7c62a1787001a16e6fee902b1d716e65b7adf8cd90d66009a1c0966fc4",
+    "results/upgrade_models/refined/coordinated/qmix_seed101.onnx": "f26cf3e25504ec8d1f19deae1ed62b465eff7ab311b0b5a317e21b60300b4a26",
+    "results/upgrade_models/refined/coordinated/qmix_seed101.onnx.data": "622d14a3b71f8beecce2bd517e31a7b997175c49e709cb3b1584924d75974cca",
+    "results/upgrade_models/refined/coordinated/qmix_seed102.onnx": "82d997dc4f360cafeb53dec016176ce5edd400520f48c3045eccc2ec1a4ee300",
+    "results/upgrade_models/refined/coordinated/qmix_seed102.onnx.data": "d68ecd2348af7619075eaabcb2eb3d25e1af87028f2af74befa13a8193cd8007",
+    "results/upgrade_models/refined/coordinated/qmix_seed103.onnx": "dca422b15638d04c66884b7c0aba03e8c896e107d1c34e96a69e5c0e79b1f169",
+    "results/upgrade_models/refined/coordinated/qmix_seed103.onnx.data": "61601f1a2a87be8ab25b292f3d50684c27b893dc9a53b044838ddf5141222df4"
+  },
+  "analysis_fingerprints": {
+    "deployment/evaluate_training_v4.py": "97081f565d7f276caae2763a05c5ab90fb1b0c1a6114997e74a003cd4d5207f9",
+    "deployment/evaluate_all.py": "198349cce25976ea62a8cec6e3c0b62f7d44d3e32ce00b529217f01cd94fc494",
+    "environment/multi_agent_env.py": "99bd7e0cbfe589e4d523889d42a6a9fb3b6b0c917560fa94f235ad2f1716f80c",
+    "environment/single_agent_env.py": "be2f65076922c9f7a02961c8e061b5ea7ec81708895ee66870bf4bce44d725c5",
+    "shared_config.py": "588e5c035e538794bac3a94ec7d13f66439d584db11f388914b335f42855d59b",
+    "training/policy_runtime.py": "2d2a096ff3166b00c276e94a43dc435de6d9b993d280cf867227f2e39f2a2b2e",
+    "training/refined_protocol.py": "bc70b0d7661bb07e5849d83b1b2cdc3637d9f029d585d0b8485905dcb5d9459b"
+  },
+  "bootstrap_replicates": 5000,
+  "bootstrap_seed": 45033
+}

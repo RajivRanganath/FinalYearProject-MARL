@@ -1,0 +1,12 @@
+{
+  "status": "INVALIDATED_PROTOCOL",
+  "discovered_date": "2026-08-20",
+  "scope": "Refined QMIX v4 training and selection interpretation only",
+  "reason": "Optimizer.load_state_dict restored the Extended checkpoint learning rate after the Refined optimizer was constructed.",
+  "declared_learning_rate": 0.0001,
+  "effective_learning_rate_in_all_37_refined_checkpoints": 0.0003,
+  "consequence": "v4 is not evidence about a low-learning-rate refinement. Its selection metrics describe a same-rate warm-start candidate that was rejected.",
+  "final_seed_status": "UNTOUCHED",
+  "final_seeds": [5001, 5002, 5003, 5004, 5005, 5006, 5007, 5008, 5009, 5010, 5011, 5012, 5013, 5014, 5015, 5016, 5017, 5018, 5019, 5020, 5021, 5022, 5023, 5024, 5025, 5026, 5027, 5028, 5029, 5030],
+  "remediation": "The loader now reapplies the configured LR after optimizer-state restore and future training verifies the LR serialized in the selected checkpoint. A corrected experiment requires fresh selection seeds."
+}

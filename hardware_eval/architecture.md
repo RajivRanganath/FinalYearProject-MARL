@@ -1,19 +1,30 @@
-# Neural Network Architecture for Hardware Evaluation
+# Hardware-Evaluation Policy Architecture
 
-This document outlines the architecture of the trained MARL policy network (individual agent network) that will be exported to ONNX for hardware profiling.
+The active hardware analysis profiles the validation-selected Extended QMIX
+recurrent policies under `results/upgrade_models/extended/coordinated/`. It does
+not use the legacy `training/policy.onnx` MLP.
 
-## Network Specifications
+## Per-replica contract
 
-- **Model Type**: Multi-Layer Perceptron (MLP) or small RNN (depending on final EPyMARL config, defaulting to standard MLP for simple environments).
-- **Input Shape**: `[1, 3]` (Batch size of 1, State Vector of 3 floats: `residual_energy`, `data_entropy`, `neighbor_sampling_rate`)
-- **Input Normalization**: All inputs are floats normalized to `[0, 1]`.
-- **Output Shape**: `[1, 2]` (Batch size of 1, Q-values for 2 discrete actions: `0` (Sleep), `1` (Sample Now))
-- **Output Interpretation**: Apply `argmax()` over the 2 output values to select the action.
+- Model: shared recurrent GRU policy (`fc1` + `GRUCell` + `fc2`).
+- Inputs: `obs[batch, 5]` and `hidden_state_in[batch, 64]`.
+- Outputs: `q_values[batch, 2]` and `hidden_state_out[batch, 64]`.
+- Parameters: 25,474.
+- Matrix MACs per recurrent step: 25,024.
+- Stateful execution: each agent retains its own 64-value hidden state between
+  timesteps and resets it only at an episode boundary.
 
-## Parameter Count Estimate
+The promoted v3 deployment rule evaluates three independently trained replicas
+per agent decision, giving 76,422 parameters and 75,072 matrix MACs before the
+voting operation. The same three weight sets are shared across the four agents;
+the recurrent hidden state is per agent and per replica.
 
-- The target parameter count for the final exported model is **strictly < 100k parameters** to ensure compatibility with memory-constrained microcontrollers (e.g., ESP32, Arduino Nano 33 BLE Sense).
-- A typical architecture of 2 hidden layers of size 64 will result in approximately `(3*64) + 64 + (64*64) + 64 + (64*2) + 2 = ~4.5k` parameters, well within our budget.
+## Evidence boundary
 
-*Note: Once the final model is trained and exported via `export_onnx.py`, this document should be updated with the exact parameter count and layer shapes.*
-modul
+`model_analysis.py` derives these values from the actual ONNX initializers and
+graph. `quantize_model.py` has verified dynamic Int8 weight quantization for one
+replica on host ONNX Runtime (see `quantization_report.json`). There is no
+ONNX-to-microcontroller conversion, compiled target runtime, operator-support
+proof, tensor-arena measurement, board latency, or power measurement. Therefore
+the device memory/latency/energy tables remain analytical estimates, not
+deployment feasibility results.

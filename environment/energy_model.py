@@ -102,6 +102,16 @@ class EnergyModel:
         return self.profile.normalized_proxy_monitor_cost
 
     @property
+    def background_step_energy_cost(self) -> float:
+        """Unavoidable sleep and proxy-monitor energy charged every step."""
+        return self.sleep_energy_cost + self.proxy_monitor_energy_cost
+
+    @property
+    def sample_step_energy_cost(self) -> float:
+        """Total same-step energy required to execute a SAMPLE action."""
+        return self.sample_energy_cost + self.background_step_energy_cost
+
+    @property
     def max_harvest_rate(self) -> float:
         """Normalized peak solar harvest rate per timestep."""
         return self.profile.normalized_max_harvest_rate

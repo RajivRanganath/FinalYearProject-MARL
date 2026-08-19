@@ -81,7 +81,7 @@ class SingleAgentSensorEnv:
         self.py_random = random.Random(seed)
 
     def get_action_mask(self) -> np.ndarray:
-        can_sample = int(self.battery >= self.energy_model.sample_energy_cost)
+        can_sample = int(self.battery >= self.energy_model.sample_step_energy_cost)
         return np.array([1, can_sample], dtype=np.int8)
 
     def _update_weather(self) -> float:
@@ -185,7 +185,10 @@ class SingleAgentSensorEnv:
         is_event = latent_entropy >= self.high_entropy_threshold
 
         sample_requested = action == shared_config.ACTION_SAMPLE
-        sample_executed = sample_requested and current_battery >= self.energy_model.sample_energy_cost
+        sample_executed = (
+            sample_requested
+            and current_battery >= self.energy_model.sample_step_energy_cost
+        )
         sample_rejected = sample_requested and not sample_executed
         if sample_requested:
             self.total_samples_requested += 1
@@ -207,7 +210,7 @@ class SingleAgentSensorEnv:
         reward = float(sum(components.values()))
 
         harvested = self._calculate_solar_harvest()
-        consumed = self.energy_model.sleep_energy_cost + self.energy_model.proxy_monitor_energy_cost
+        consumed = self.energy_model.background_step_energy_cost
         if sample_executed:
             consumed += self.energy_model.sample_energy_cost
         self.total_harvested_energy += harvested

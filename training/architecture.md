@@ -1,4 +1,13 @@
-# Module C: MARL Policy Architecture Specification
+# Historical Architecture Note (Superseded)
+
+> This file described the legacy `training/policy.onnx` MLP and must not be used
+> for current hardware claims. Selected Extended QMIX policies are recurrent
+> GRU networks with five observation inputs, 64 hidden units, 25,474 parameters
+> per replica, and persistent per-agent hidden state. The promoted v3 policy
+> evaluates three such replicas per decision. Use
+> `hardware_eval/model_analysis.py` for graph-derived counts.
+
+# Legacy Module C: MARL Policy Architecture Specification
 
 This document provides the exact model specifications for the trained EPyMARL policy network (`training/policy.onnx`). Module C should use this for all hardware profiling (memory footprint, latency, and energy estimation).
 

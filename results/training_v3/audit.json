@@ -1,0 +1,153 @@
+{
+  "passed": true,
+  "checks": [
+    {
+      "name": "predeclared_selection_gate_promoted_unanimous",
+      "passed": true,
+      "evidence": {
+        "QMIX Majority Ensemble": {
+          "reward_advantage": 0.27622777777778235,
+          "reward_ci95_low": -0.7022085742145379,
+          "reward_p_holm": 0.5615560533481957,
+          "recall_advantage": 0.00015138556147376026,
+          "energy_advantage": 0.03333333333333357,
+          "redundancy_advantage": 0.4166666666666668,
+          "passed": false
+        },
+        "QMIX Unanimous Ensemble": {
+          "reward_advantage": 4.192994444444429,
+          "reward_ci95_low": 2.575564653501452,
+          "reward_p_holm": 6.196665169982996e-05,
+          "recall_advantage": 0.0034531357671170105,
+          "energy_advantage": 0.22833333333334477,
+          "redundancy_advantage": 1.4166666666666667,
+          "passed": true
+        }
+      }
+    },
+    {
+      "name": "new_final_split_is_disjoint",
+      "passed": true,
+      "evidence": {
+        "selection": [
+          231,
+          232,
+          233,
+          234,
+          235,
+          236,
+          237,
+          238,
+          239,
+          240,
+          241,
+          242,
+          243,
+          244,
+          245,
+          246,
+          247,
+          248,
+          249,
+          250
+        ],
+        "final": [
+          4001,
+          4002,
+          4003,
+          4004,
+          4005,
+          4006,
+          4007,
+          4008,
+          4009,
+          4010,
+          4011,
+          4012,
+          4013,
+          4014,
+          4015,
+          4016,
+          4017,
+          4018,
+          4019,
+          4020,
+          4021,
+          4022,
+          4023,
+          4024,
+          4025,
+          4026,
+          4027,
+          4028,
+          4029,
+          4030
+        ]
+      }
+    },
+    {
+      "name": "final_row_cardinality_and_uniqueness",
+      "passed": true,
+      "evidence": 210
+    },
+    {
+      "name": "final_policy_coverage",
+      "passed": true,
+      "evidence": [
+        "Battery + Entropy",
+        "Entropy Threshold",
+        "Extended QMIX Replica Mean",
+        "Greedy",
+        "QMIX Unanimous Ensemble"
+      ]
+    },
+    {
+      "name": "replica_and_ensemble_labels",
+      "passed": true,
+      "evidence": {
+        "reference_training_seeds": [
+          101,
+          102,
+          103
+        ],
+        "ensemble_rows": 30
+      }
+    },
+    {
+      "name": "predeclared_final_comparison_family",
+      "passed": true,
+      "evidence": 12
+    },
+    {
+      "name": "model_fingerprints_match_selection_final_and_disk",
+      "passed": true,
+      "evidence": {
+        "files": 6
+      }
+    },
+    {
+      "name": "analysis_fingerprints_match_selection_final_and_disk",
+      "passed": true,
+      "evidence": {
+        "files": 6
+      }
+    },
+    {
+      "name": "final_reward_gain_replication",
+      "passed": true,
+      "evidence": {
+        "reference": 153.37579259259257,
+        "candidate": 157.4274,
+        "advantage_ci95": [
+          2.922778738787893,
+          5.180436076026928
+        ]
+      }
+    },
+    {
+      "name": "final_consumption_guard_will_block_rerun",
+      "passed": true,
+      "evidence": "results/training_v3/final/raw.csv"
+    }
+  ]
+}

@@ -1,0 +1,65 @@
+{
+  "split": "selection",
+  "scenario": "volatile",
+  "regime": "coordinated",
+  "environment_seeds": [
+    211,
+    212,
+    213,
+    214,
+    215,
+    216,
+    217,
+    218,
+    219,
+    220,
+    221,
+    222,
+    223,
+    224,
+    225,
+    226,
+    227,
+    228,
+    229,
+    230
+  ],
+  "git_sha": "2d920fa26d1781341a1f260b7d8309fadb134d87",
+  "git_worktree_dirty": true,
+  "model_fingerprints": {
+    "results/upgrade_models/improved/coordinated/qmix_seed101.onnx": "6897c974646366e295ceb0b01bea6f055a45be8e8621fa19da7eb47165c5ddaa",
+    "results/upgrade_models/improved/coordinated/qmix_seed101.onnx.data": "15cd83170640fc0df2133b8c61e61b13a8be9fc5c2b868bea1027479eba4317b",
+    "results/upgrade_models/improved/coordinated/qmix_seed102.onnx": "06a51bf2faf44c7df4bdfad55f665b968137d0a945c91ecbb5bc5837cee144f4",
+    "results/upgrade_models/improved/coordinated/qmix_seed102.onnx.data": "a46e1f1d9c68a515d18672498828a98ada579d9f421fc13f69270a24fc6d7ccd",
+    "results/upgrade_models/improved/coordinated/qmix_seed103.onnx": "a1d62b58070f5aae00b4ebaf37bb3682c7d07465e46b0cee16169c5c616b437a",
+    "results/upgrade_models/improved/coordinated/qmix_seed103.onnx.data": "f18ab037532357c79aa3aeb0f26f7b4af2182875915b16f27476c851b1251318",
+    "results/upgrade_models/extended/coordinated/qmix_seed101.onnx": "fda77e1c4fb2fb2c20dc073a3b4c31c62cbcf7ed40d07b6870bbeed06adb99c8",
+    "results/upgrade_models/extended/coordinated/qmix_seed101.onnx.data": "432a5b07307149cfc4a7a17de428dd184a6287b9aaee385842c1006f850ffcba",
+    "results/upgrade_models/extended/coordinated/qmix_seed102.onnx": "533538e9cb7800eca069abeacfc3549116da3dcc73d0e5d9f426a46baf188e6b",
+    "results/upgrade_models/extended/coordinated/qmix_seed102.onnx.data": "9b7cbc19e93073d7c70aca31ff32fdcfa90e4437fd90a26d6bea42ad1e75b5d3",
+    "results/upgrade_models/extended/coordinated/qmix_seed103.onnx": "8f782ba5597b7b379c2947ccc0f525726ab3944c26766f7390dc0418935663a5",
+    "results/upgrade_models/extended/coordinated/qmix_seed103.onnx.data": "d488ab7c62a1787001a16e6fee902b1d716e65b7adf8cd90d66009a1c0966fc4"
+  },
+  "analysis_fingerprints": {
+    "deployment/evaluate_training_v2.py": "84677a723f5cdf00f907a29fabf4981d79e818086d05be31710a379b4f97463e",
+    "deployment/evaluate_all.py": "198349cce25976ea62a8cec6e3c0b62f7d44d3e32ce00b529217f01cd94fc494",
+    "environment/multi_agent_env.py": "99bd7e0cbfe589e4d523889d42a6a9fb3b6b0c917560fa94f235ad2f1716f80c",
+    "environment/single_agent_env.py": "be2f65076922c9f7a02961c8e061b5ea7ec81708895ee66870bf4bce44d725c5",
+    "shared_config.py": "588e5c035e538794bac3a94ec7d13f66439d584db11f388914b335f42855d59b",
+    "training/policy_runtime.py": "2d2a096ff3166b00c276e94a43dc435de6d9b993d280cf867227f2e39f2a2b2e"
+  },
+  "bootstrap_replicates": 5000,
+  "bootstrap_seed": 25033,
+  "primary_comparators": [
+    "Improved QMIX",
+    "Entropy Threshold"
+  ],
+  "primary_metrics": [
+    "raw_episode_reward",
+    "event_recall",
+    "total_energy_consumption",
+    "mean_aoi",
+    "redundant_sampling",
+    "network_coverage"
+  ]
+}

@@ -50,11 +50,29 @@ def write_provenance() -> Path:
         "results/sanity/*.json",
         "results/experiments/training_manifest_*.json",
         "results/learned_models/**/*.onnx",
+        "results/learned_models/**/*.onnx.data",
         "results/ablation_models/**/*.onnx",
+        "results/ablation_models/**/*.onnx.data",
+        "results/upgrade_models/**/*.onnx",
+        "results/upgrade_models/**/*.onnx.data",
         "results/final/**/*.csv",
         "results/ablations/*",
         "results/figures/*",
-        "results/final_audit.json",
+        # The split-locked holdouts are the artifacts that most need tamper
+        # evidence: they were evaluated exactly once and can never be
+        # regenerated, so an unnoticed edit would be unrecoverable.
+        "results/training_v2/**/*.csv",
+        "results/training_v2/**/*.json",
+        "results/training_v2/**/*.md",
+        "results/training_v3/**/*.csv",
+        "results/training_v3/**/*.json",
+        "results/training_v3/**/*.md",
+        "results/training_v4/**/*.csv",
+        "results/training_v4/**/*.json",
+        "results/training_v4/**/*.md",
+        "results/upgrade_experiments/training_manifest_*.json",
+        "results/environment_drift.json",
+        "results/environment_drift_impact.json",
         "FINAL_RESEARCH_REPORT.md",
     ]
     artifact_paths = set()
@@ -70,8 +88,13 @@ def write_provenance() -> Path:
         "git_status_porcelain": status.splitlines(),
         "tracked_diff_sha256": hashlib.sha256(diff.encode()).hexdigest(),
         "note": (
-            "Full training ran in this disclosed dirty worktree. Later report/plotting and "
-            "provenance-only edits do not retroactively make the base SHA a clean source snapshot."
+            "This record fingerprints the source and artifacts as they stand when it is written; "
+            "it is not a claim that the base SHA is the source that produced the artifacts. Training "
+            "ran earlier, in a dirty worktree, and two source repairs postdate every result here. "
+            "See results/environment_drift.json for what changed and results/environment_drift_impact.json "
+            "for the measured effect. A clean git_worktree_dirty flag below means only that the tree "
+            "was committed before hashing. External ONNX data files are hashed separately because "
+            "they contain model tensors."
         ),
         "source_sha256": {
             str(path.relative_to(ROOT_DIR)): _sha(path)

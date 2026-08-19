@@ -1,0 +1,279 @@
+{
+  "passed": true,
+  "checks": [
+    {
+      "name": "selection_gate_promoted",
+      "passed": true,
+      "evidence": {
+        "101": 23.688416666666683,
+        "102": 37.70451666666665,
+        "103": 28.44808333333333
+      }
+    },
+    {
+      "name": "validation_selection_final_splits_disjoint",
+      "passed": true,
+      "evidence": {
+        "validation": [
+          201,
+          202,
+          203,
+          204,
+          205,
+          206,
+          207,
+          208,
+          209,
+          210
+        ],
+        "selection": [
+          211,
+          212,
+          213,
+          214,
+          215,
+          216,
+          217,
+          218,
+          219,
+          220,
+          221,
+          222,
+          223,
+          224,
+          225,
+          226,
+          227,
+          228,
+          229,
+          230
+        ],
+        "final": [
+          3001,
+          3002,
+          3003,
+          3004,
+          3005,
+          3006,
+          3007,
+          3008,
+          3009,
+          3010,
+          3011,
+          3012,
+          3013,
+          3014,
+          3015,
+          3016,
+          3017,
+          3018,
+          3019,
+          3020,
+          3021,
+          3022,
+          3023,
+          3024,
+          3025,
+          3026,
+          3027,
+          3028,
+          3029,
+          3030
+        ]
+      }
+    },
+    {
+      "name": "locked_final_seed_coverage",
+      "passed": true,
+      "evidence": [
+        3001,
+        3002,
+        3003,
+        3004,
+        3005,
+        3006,
+        3007,
+        3008,
+        3009,
+        3010,
+        3011,
+        3012,
+        3013,
+        3014,
+        3015,
+        3016,
+        3017,
+        3018,
+        3019,
+        3020,
+        3021,
+        3022,
+        3023,
+        3024,
+        3025,
+        3026,
+        3027,
+        3028,
+        3029,
+        3030
+      ]
+    },
+    {
+      "name": "raw_row_cardinality_and_uniqueness",
+      "passed": true,
+      "evidence": 660
+    },
+    {
+      "name": "policy_and_summary_coverage",
+      "passed": true,
+      "evidence": [
+        "Always Sample",
+        "Always Sleep",
+        "Battery + Entropy",
+        "Entropy Threshold",
+        "Extended QMIX",
+        "Fixed Interval",
+        "Greedy",
+        "Improved QMIX",
+        "Published IQL",
+        "Published QMIX",
+        "Published VDN",
+        "Random Feasible"
+      ]
+    },
+    {
+      "name": "training_replica_labels",
+      "passed": true,
+      "evidence": {
+        "Extended QMIX": [
+          101,
+          102,
+          103
+        ],
+        "Improved QMIX": [
+          101,
+          102,
+          103
+        ],
+        "Published IQL": [
+          101,
+          102,
+          103
+        ],
+        "Published QMIX": [
+          101,
+          102,
+          103
+        ],
+        "Published VDN": [
+          101,
+          102,
+          103
+        ]
+      }
+    },
+    {
+      "name": "predeclared_comparison_family",
+      "passed": true,
+      "evidence": [
+        [
+          "Entropy Threshold",
+          "event_recall"
+        ],
+        [
+          "Entropy Threshold",
+          "mean_aoi"
+        ],
+        [
+          "Entropy Threshold",
+          "network_coverage"
+        ],
+        [
+          "Entropy Threshold",
+          "raw_episode_reward"
+        ],
+        [
+          "Entropy Threshold",
+          "redundant_sampling"
+        ],
+        [
+          "Entropy Threshold",
+          "total_energy_consumption"
+        ],
+        [
+          "Improved QMIX",
+          "event_recall"
+        ],
+        [
+          "Improved QMIX",
+          "mean_aoi"
+        ],
+        [
+          "Improved QMIX",
+          "network_coverage"
+        ],
+        [
+          "Improved QMIX",
+          "raw_episode_reward"
+        ],
+        [
+          "Improved QMIX",
+          "redundant_sampling"
+        ],
+        [
+          "Improved QMIX",
+          "total_energy_consumption"
+        ]
+      ]
+    },
+    {
+      "name": "all_extended_training_replicas_succeeded",
+      "passed": true,
+      "evidence": {
+        "101": "SUCCESS",
+        "102": "SUCCESS",
+        "103": "SUCCESS"
+      }
+    },
+    {
+      "name": "selected_checkpoints_choose_both_actions",
+      "passed": true,
+      "evidence": {
+        "101": [
+          8682,
+          2838
+        ],
+        "102": [
+          8677,
+          2843
+        ],
+        "103": [
+          8723,
+          2797
+        ]
+      }
+    },
+    {
+      "name": "model_fingerprints_match_selection_final_and_disk",
+      "passed": true,
+      "evidence": {
+        "files": 12
+      }
+    },
+    {
+      "name": "analysis_fingerprints_match_selection_final_and_disk",
+      "passed": true,
+      "evidence": {
+        "files": 6
+      }
+    },
+    {
+      "name": "bootstrap_protocol_frozen",
+      "passed": true,
+      "evidence": {
+        "replicates": 5000,
+        "seed": 25033
+      }
+    }
+  ]
+}

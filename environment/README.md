@@ -1,5 +1,14 @@
 # Module A — Environment and Simulation Core
 
+> [!WARNING]
+> **Historical document:** most phase-by-phase detail below describes the
+> original 3-feature entropy-oracle environment and is retained only as an
+> implementation history. The active environment has a five-feature causal
+> observation: battery, noisy event proxy, normalized AoI, lagged neighbor
+> sampling rate, and harvest forecast. Latent entropy is revealed only after a
+> successful sample. Use `shared_config.py`, `single_agent_env.py`, and the root
+> `FINAL_RESEARCH_REPORT.md` as the current contract.
+
 This directory contains the complete Dec-POMDP simulation environment for the MARL Adaptive IoT Sampling project.
 
 > [!NOTE]
@@ -97,11 +106,11 @@ w_{\text{coord}} \times N_{\text{co-samplers}} & \text{if Action}_i = \text{Samp
 
 ## 6. PettingZoo Wrapper (`IoTSensorEnv`) & Module B Integration
 
-Implemented in [`pettingzoo_env.py`](file:///c:/Users/VISMAYA/Desktop/marl/FinalYearProject-MARL/environment/pettingzoo_env.py), the `IoTSensorEnv` class subclasses `pettingzoo.ParallelEnv` and wraps `MultiAgentSensorEnv`.
+Implemented in [`pettingzoo_env.py`](pettingzoo_env.py), the `IoTSensorEnv` class subclasses `pettingzoo.ParallelEnv` and wraps `MultiAgentSensorEnv`.
 
 ### Drop-In Compatibility Confirmation
 
-`IoTSensorEnv` is a **100% true drop-in replacement** for [`training/mock_env.py`](file:///c:/Users/VISMAYA/Desktop/marl/FinalYearProject-MARL/training/mock_env.py)'s `MockIoTSensorEnv`.
+Historically, `IoTSensorEnv` replaced [`training/mock_env.py`](../training/mock_env.py)'s `MockIoTSensorEnv`; current training already uses the real wrapper directly.
 
 To swap from the mock environment to the real physics simulation in Module B's [`training/env_wrapper.py`](file:///c:/Users/VISMAYA/Desktop/marl/FinalYearProject-MARL/training/env_wrapper.py):
 
@@ -124,11 +133,11 @@ No method signature, return shape, or dictionary key changes are required on Mod
 
 | Deliverable | File Path | Purpose / Description |
 | :--- | :--- | :--- |
-| **Deliverable 1: Single-Agent Foundation** | [`environment/single_agent_env.py`](file:///c:/Users/VISMAYA/Desktop/marl/FinalYearProject-MARL/environment/single_agent_env.py) | Single node Dec-POMDP physics (harvesting, entropy spikes, energy causality). |
-| **Deliverable 2: Multi-Agent Environment** | [`environment/multi_agent_env.py`](file:///c:/Users/VISMAYA/Desktop/marl/FinalYearProject-MARL/environment/multi_agent_env.py) | 4-agent environment with rolling `neighbor_sampling_rate` & partial observability. |
-| **Deliverable 3: PettingZoo ParallelEnv Wrapper** | [`environment/pettingzoo_env.py`](file:///c:/Users/VISMAYA/Desktop/marl/FinalYearProject-MARL/environment/pettingzoo_env.py) | PettingZoo wrapper matching `MockIoTSensorEnv` interface exactly. |
-| **Deliverable 4: Scenario Configurations** | [`shared_config.py`](file:///c:/Users/VISMAYA/Desktop/marl/FinalYearProject-MARL/shared_config.py) | `stable` vs `volatile` scenario parameters. |
-| **Deliverable 5: Baseline Results Report** | [`environment/baseline_results.py`](file:///c:/Users/VISMAYA/Desktop/marl/FinalYearProject-MARL/environment/baseline_results.py)<br>[`environment/baseline_results.md`](file:///c:/Users/VISMAYA/Desktop/marl/FinalYearProject-MARL/environment/baseline_results.md) | Measured benchmarks for 3 baseline policies across both scenarios. |
+| **Deliverable 1: Single-Agent Foundation** | [`single_agent_env.py`](single_agent_env.py) | Single node Dec-POMDP physics (harvesting, entropy spikes, energy causality). |
+| **Deliverable 2: Multi-Agent Environment** | [`multi_agent_env.py`](multi_agent_env.py) | 4-agent environment with rolling `neighbor_sampling_rate` & partial observability. |
+| **Deliverable 3: PettingZoo ParallelEnv Wrapper** | [`pettingzoo_env.py`](pettingzoo_env.py) | PettingZoo parallel wrapper. |
+| **Deliverable 4: Scenario Configurations** | [`shared_config.py`](../shared_config.py) | `stable` vs `volatile` scenario parameters. |
+| **Deliverable 5: Baseline Results Report** | [`baseline_results.py`](baseline_results.py)<br>[`baseline_results.md`](baseline_results.md) | Historical baseline artifact. |
 
 ---
 

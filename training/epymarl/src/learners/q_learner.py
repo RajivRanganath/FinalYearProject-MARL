@@ -235,6 +235,17 @@ class QLearner:
                     map_location=lambda storage, loc: storage,
                 )
             )
+            # A resumed learner must bootstrap from the restored mixer, not a
+            # fresh random target mixer.  The actor target is restored above;
+            # keeping the mixer target random corrupts the first TD targets.
+            self.target_mixer.load_state_dict(self.mixer.state_dict())
         self.optimiser.load_state_dict(
             th.load("{}/opt.th".format(path), map_location=lambda storage, loc: storage)
         )
+        # ``Optimizer.load_state_dict`` restores parameter-group options as
+        # well as moments.  That is desirable for the Adam state, but it also
+        # overwrites a continuation profile's configured learning rate with
+        # the source checkpoint's value.  Reapply the current run contract so
+        # a requested low/high-LR warm start actually uses ``args.lr``.
+        for param_group in self.optimiser.param_groups:
+            param_group["lr"] = self.args.lr

@@ -1,5 +1,10 @@
 # Comprehensive Project Audit: MARL Adaptive IoT Energy-Harvesting & TinyML Evaluation
 
+> Historical snapshot: this audit predates the current recurrent-policy export,
+> split-locked training upgrades, and repaired hardware tooling. Use README.md,
+> FINAL_RESEARCH_REPORT.md, LIMITATIONS.md, and the current audit scripts for the
+> present repository state.
+
 **Repository:** `FinalYearProject-MARL`  
 **Audit Date:** August 17, 2026  
 **Auditor Role:** Senior MARL, IoT Energy-Harvesting & TinyML Research Engineer  

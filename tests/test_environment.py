@@ -40,6 +40,27 @@ def test_battery_causality_and_non_negativity():
     assert info["sample_executed"] is False
     assert env.battery >= 0.0, "Battery must never drop below 0"
 
+
+def test_sample_mask_accounts_for_all_same_step_energy_costs():
+    env = SingleAgentSensorEnv(scenario="stable", seed=123)
+    env.timestep = 0  # night: no harvest can mask an energy-causality defect
+    full_sample_cost = (
+        env.energy_model.sample_energy_cost
+        + env.energy_model.sleep_energy_cost
+        + env.energy_model.proxy_monitor_energy_cost
+    )
+    env.battery = full_sample_cost - 1e-8
+    assert env.get_action_mask().tolist() == [1, 0]
+    _, _, _, _, rejected = env.step(shared_config.ACTION_SAMPLE)
+    assert rejected["sample_executed"] is False
+    assert rejected["sample_rejected"] is True
+
+    env.battery = full_sample_cost
+    assert env.get_action_mask().tolist() == [1, 1]
+    _, _, _, _, executed = env.step(shared_config.ACTION_SAMPLE)
+    assert executed["sample_executed"] is True
+    assert executed["consumed_energy"] <= full_sample_cost
+
 def test_markov_temporal_reward_alignment():
     """
     Verify that reward R(s_t, a_t) corresponds to the entropy observed at decision time t,

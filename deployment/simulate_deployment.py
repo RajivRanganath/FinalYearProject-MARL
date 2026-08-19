@@ -29,6 +29,10 @@ if str(_PROJECT_ROOT) not in sys.path:
 
 import shared_config
 from environment.pettingzoo_env import IoTSensorEnv
+from training.policy_runtime import (
+    ONNXPolicy as StatefulONNXPolicy,
+    ObservationMaskPolicy,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -57,37 +61,35 @@ class ONNXPolicy:
     """
     Wraps an ONNX model for per-agent inference with one-hot agent ID.
 
-    HIDDEN STATE NOTE: This model was trained with use_rnn=False (MLP mode).
-    The hidden_state_in input is structurally required by the ONNX graph but
-    is not used by the network — a fresh zero tensor is passed each call.
-    If the model were retrained with use_rnn=True (GRU), this class would need
-    to maintain per-agent hidden state across timesteps.
+    The deployed recurrent state is maintained independently for each agent.
+    Input identity is inferred from the graph (environment-only or environment
+    plus one-hot agent ID) rather than from a stale hard-coded dimension.
     """
 
-    def __init__(self, onnx_path, n_agents, hidden_dim=128):
-        self.session = ort.InferenceSession(str(onnx_path))
-        self.n_agents = n_agents
-        self.hidden_dim = hidden_dim
+    def __init__(self, onnx_path, n_agents=None, mask_neighbor_signal=False):
+        session = ort.InferenceSession(str(onnx_path))
+        input_dim = int(session.get_inputs()[0].shape[1])
+        if input_dim == shared_config.MODEL_INPUT_DIM:
+            include_agent_id = True
+        elif input_dim == shared_config.ENV_OBS_DIM:
+            include_agent_id = False
+        else:
+            raise ValueError(f"Unsupported ONNX input dimension: {input_dim}")
+        policy = StatefulONNXPolicy(Path(onnx_path), include_agent_id=include_agent_id)
+        self.policy = (
+            ObservationMaskPolicy(
+                policy, [shared_config.STATE_INDEX_NEIGHBOR_SAMPLING_RATE]
+            )
+            if mask_neighbor_signal
+            else policy
+        )
         self.act1_count = 0
 
+    def reset(self):
+        self.policy.reset()
+
     def select_action(self, agent_id, obs, step_count=None, info=None):
-        agent_idx = int(agent_id.split('_')[1])
-        one_hot = np.zeros(self.n_agents, dtype=np.float32)
-        one_hot[agent_idx] = 1.0
-
-        full_obs = np.concatenate([obs, one_hot]).astype(np.float32)
-        full_obs = np.expand_dims(full_obs, axis=0)
-
-        # MLP mode: hidden state is unused, pass zeros (see docstring above)
-        hidden_in = np.zeros((1, self.hidden_dim), dtype=np.float32)
-
-        outputs = self.session.run(None, {
-            'obs': full_obs,
-            'hidden_state_in': hidden_in
-        })
-        q_values = outputs[0][0]
-        
-        return int(np.argmax(q_values))
+        return self.policy.select_action(agent_id, obs, info or {})
 
 
 # ---------------------------------------------------------------------------
@@ -108,6 +110,9 @@ def run_episode(env, policy_fn, scenario, seed):
         dict of collected metrics
     """
     obs_dict, info_dict = env.reset(seed=seed)
+    owner = getattr(policy_fn, "__self__", None)
+    if owner is not None and hasattr(owner, "reset"):
+        owner.reset()
 
     agent_ids = env.possible_agents
     n_agents = len(agent_ids)
@@ -233,7 +238,10 @@ def run_full_comparison(onnx_path, episodes=5):
     SEED, SEED+1, ..., SEED+(episodes-1). Results are averaged for robustness.
     """
 
-    marl_policy = ONNXPolicy(onnx_path, shared_config.NUM_AGENTS)
+    # The default Extended profile was trained with this feature masked.
+    marl_policy = ONNXPolicy(
+        onnx_path, shared_config.NUM_AGENTS, mask_neighbor_signal=True
+    )
 
     policies = {
         "QMIX (Trained)": marl_policy.select_action,
@@ -288,13 +296,20 @@ def run_full_comparison(onnx_path, episodes=5):
         print(f"    Missed Events: {marl['missed_events']} vs {rule['missed_events']} "
               f"(QMIX {'better' if marl['missed_events'] < rule['missed_events'] else 'worse'})")
         print(f"    AoI Stability: {marl['mean_aoi']:.1f} vs {rule['mean_aoi']:.1f} mean AoI "
-              f"(QMIX {'better' if marl['mean_aoi'] < fixed['mean_aoi'] else 'worse'})")
+              f"(QMIX {'better' if marl['mean_aoi'] < rule['mean_aoi'] else 'worse'})")
         print(f"    Reward Improvement: {marl['team_reward'] - rule['team_reward']:+.2f}")
         print()
 
 
 if __name__ == "__main__":
-    onnx_file = _PROJECT_ROOT / "training" / "policy.onnx"
+    onnx_file = (
+        _PROJECT_ROOT
+        / "results"
+        / "upgrade_models"
+        / "extended"
+        / "coordinated"
+        / "qmix_seed101.onnx"
+    )
     if not onnx_file.exists():
         print(f"Error: ONNX file not found at {onnx_file}")
         sys.exit(1)

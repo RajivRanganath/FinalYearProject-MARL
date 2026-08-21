@@ -74,6 +74,11 @@ def export_agent_to_onnx(
         agent,
         (dummy_obs, dummy_hidden),
         str(out_file),
+        # The legacy exporter is intentional here: PyTorch's dynamo exporter
+        # currently specializes GRUCell outputs to the example batch size even
+        # when dynamic axes are requested. This path preserves the declared
+        # batch contract and is covered by batch-2 ONNX Runtime inference.
+        dynamo=False,
         export_params=True,
         opset_version=18,
         do_constant_folding=True,
@@ -81,12 +86,28 @@ def export_agent_to_onnx(
         output_names=['q_values', 'hidden_state_out'],
         dynamic_axes={
             'obs': {0: 'batch_size'},
-            'hidden_state_in': {0: 'batch_size'}
+            'hidden_state_in': {0: 'batch_size'},
+            'q_values': {0: 'batch_size'},
+            'hidden_state_out': {0: 'batch_size'},
         }
     )
 
-    # Verify exported ONNX model
+    # GRUCell's TorchScript export can leave the known feature width symbolic.
+    # Pin only the non-batch output dimensions; axis 0 remains dynamic.
     onnx_model = onnx.load(str(out_file))
+    known_output_widths = {
+        "q_values": shared_config.NUM_ACTIONS,
+        "hidden_state_out": detected_hidden_dim,
+    }
+    for output in onnx_model.graph.output:
+        width = known_output_widths.get(output.name)
+        if width is not None:
+            feature_dim = output.type.tensor_type.shape.dim[1]
+            feature_dim.ClearField("dim_param")
+            feature_dim.dim_value = width
+    onnx.save(onnx_model, str(out_file))
+
+    # Verify exported ONNX model
     onnx.checker.check_model(onnx_model)
 
     # Test inference with ONNX Runtime

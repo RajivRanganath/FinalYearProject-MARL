@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "created_at_utc": "2026-08-17T12:15:07.747485+00:00",
+  "created_at_utc": "2026-08-19T21:46:54.208037+00:00",
   "scenario": "volatile",
   "regime": "independent",
-  "config_digest": "7c0bec2f79ae2307",
+  "config_digest": "ae510abba91917cb",
   "all_passed": true,
   "checks": [
     {
@@ -74,12 +74,12 @@
       "name": "single_agent_learning",
       "passed": true,
       "evidence": {
-        "learned_return_mean": 36.458699999999986,
+        "learned_return_mean": 21.664999999999974,
         "always_sleep_return_mean": -94.42499999999949,
-        "sample_fraction_mean": 0.22291666666666665,
+        "sample_fraction_mean": 0.27638888888888885,
         "training_action_visits": [
-          56422,
-          29978
+          56179,
+          30221
         ]
       }
     },
@@ -91,7 +91,7 @@
         "regime": "independent",
         "obs_dim": 5,
         "state_dim": 20,
-        "config_digest": "7c0bec2f79ae2307"
+        "config_digest": "ae510abba91917cb"
       }
     },
     {

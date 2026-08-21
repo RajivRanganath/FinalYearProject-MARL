@@ -1,0 +1,144 @@
+{
+  "passed": true,
+  "checks": [
+    {
+      "name": "strict_gate_rejected_candidate",
+      "passed": true,
+      "evidence": {
+        "mean_reward_advantage": 1.4363499999999967,
+        "reward_environment_ci95_low": 0.4605713092346563,
+        "reward_two_way_bootstrap_ci95_low": -0.7400205555555538,
+        "recall_advantage": 0.0014281173632611833,
+        "energy_advantage": 0.10250000000000385,
+        "redundancy_advantage": 0.5000000000000003,
+        "reward_advantage_by_training_seed": {
+          "101": 3.799749999999989,
+          "102": -0.31163333333330456,
+          "103": 0.8209333333333007
+        }
+      }
+    },
+    {
+      "name": "optimizer_lr_mismatch_detected_and_v4_invalidated",
+      "passed": true,
+      "evidence": {
+        "declared": {
+          "101": 0.0001,
+          "102": 0.0001,
+          "103": 0.0001
+        },
+        "serialized_optimizer": {
+          "101": [
+            0.0003
+          ],
+          "102": [
+            0.0003
+          ],
+          "103": [
+            0.0003
+          ]
+        },
+        "invalidation": "INVALIDATED_PROTOCOL"
+      }
+    },
+    {
+      "name": "exact_resume_steps_audited",
+      "passed": true,
+      "evidence": {
+        "101": {
+          "step": 360288,
+          "audit": "legacy load_step=0 resolved latest; latest equals validation-selected step"
+        },
+        "102": {
+          "step": 360288,
+          "audit": "legacy load_step=0 resolved latest; latest equals validation-selected step"
+        },
+        "103": {
+          "step": 289440,
+          "audit": "exact load_step"
+        }
+      }
+    },
+    {
+      "name": "selected_checkpoints_choose_both_actions",
+      "passed": true,
+      "evidence": {
+        "101": [
+          8743,
+          2777
+        ],
+        "102": [
+          8700,
+          2820
+        ],
+        "103": [
+          8742,
+          2778
+        ]
+      }
+    },
+    {
+      "name": "selection_contract_complete_exact_and_disjoint",
+      "passed": true,
+      "evidence": {
+        "rows": 160,
+        "selection_seeds": [
+          251,
+          252,
+          253,
+          254,
+          255,
+          256,
+          257,
+          258,
+          259,
+          260,
+          261,
+          262,
+          263,
+          264,
+          265,
+          266,
+          267,
+          268,
+          269,
+          270
+        ],
+        "policies": [
+          "Battery + Entropy",
+          "Entropy Threshold",
+          "Extended QMIX",
+          "Refined QMIX"
+        ],
+        "training_seeds": [
+          101,
+          102,
+          103
+        ],
+        "all_splits_disjoint": true
+      }
+    },
+    {
+      "name": "model_hashes_match_selection_and_disk",
+      "passed": true,
+      "evidence": {
+        "files": 12
+      }
+    },
+    {
+      "name": "frozen_analysis_snapshot_preserved_but_current_code_separated",
+      "passed": true,
+      "evidence": {
+        "changed_after_frozen_selection": [
+          "deployment/evaluate_training_v4.py",
+          "environment/single_agent_env.py"
+        ]
+      }
+    },
+    {
+      "name": "locked_final_was_not_consumed",
+      "passed": true,
+      "evidence": "v4 final raw data and consumption sentinel absent"
+    }
+  ]
+}

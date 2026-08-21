@@ -1,33 +1,24 @@
+"""Compatibility entry point for the canonical, sanity-gated QMIX trainer."""
+
+from pathlib import Path
 import subprocess
 import sys
-import os
 
-# Get path to epymarl's main.py
-epymarl_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "epymarl", "src")
-main_script = os.path.join(epymarl_dir, "main.py")
 
-# Ensure DEVICE and SEED from shared config are used
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import shared_config
+ROOT_DIR = Path(__file__).resolve().parent.parent
+TRAIN_ALL = ROOT_DIR / "training" / "train_all.py"
 
 def train_marl():
+    if any(arg == "--alg" or arg.startswith("--alg=") for arg in sys.argv[1:]):
+        raise SystemExit("training/train_qmix.py fixes --alg=qmix; do not pass --alg")
     cmd = [
-        sys.executable, main_script,
-        "--config=iql",
-        "--env-config=iot",
-        "with",
-        "t_max=1000000",
-        "lr=0.001",
-        "epsilon_anneal_time=100000",
-        "common_reward=False",
-        "reward_scalarisation=None",
-        "standardise_rewards=False",
-        "use_rnn=False",
-        "save_model=True",
-        "save_model_interval=200000"
+        sys.executable,
+        str(TRAIN_ALL),
+        "--alg=qmix",
+        *sys.argv[1:],
     ]
-    print(f"Running MARL with command: {' '.join(cmd)}")
-    subprocess.run(cmd)
+    print(f"Running canonical QMIX training: {' '.join(cmd)}")
+    return subprocess.run(cmd, cwd=ROOT_DIR, check=False).returncode
 
 if __name__ == "__main__":
-    train_marl()
+    raise SystemExit(train_marl())

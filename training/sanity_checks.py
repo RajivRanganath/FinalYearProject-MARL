@@ -17,6 +17,7 @@ if str(ROOT_DIR) not in sys.path:
     sys.path.append(str(ROOT_DIR))
 
 import shared_config
+from environment.energy_model import EnergyModel
 from environment.multi_agent_env import MultiAgentSensorEnv
 from environment.pettingzoo_env import IoTSensorEnv
 from environment.single_agent_env import SingleAgentSensorEnv
@@ -122,12 +123,30 @@ def _single_agent_learning(seed: int = 11, episodes: int = 300) -> Dict[str, Any
 
 
 def config_digest(scenario: str, regime: str) -> str:
+    source_files = (
+        ROOT_DIR / "environment" / "energy_model.py",
+        ROOT_DIR / "environment" / "single_agent_env.py",
+        ROOT_DIR / "environment" / "multi_agent_env.py",
+        ROOT_DIR / "environment" / "pettingzoo_env.py",
+    )
     payload = {
         "scenario": scenario,
         "regime": regime,
         "obs_dim": shared_config.ENV_OBS_DIM,
+        "episode_length": shared_config.EPISODE_LENGTH_TIMESTEPS,
+        "event_proxy": {
+            "noise_std": shared_config.EVENT_PROXY_NOISE_STD,
+            "false_negative_rate": shared_config.EVENT_PROXY_FALSE_NEGATIVE_RATE,
+            "false_positive_rate": shared_config.EVENT_PROXY_FALSE_POSITIVE_RATE,
+        },
+        "energy_profile": vars(EnergyModel().profile),
+        "sample_feasibility": "battery >= sample + sleep + proxy-monitor same-step costs",
         "reward_weights": shared_config.REWARD_WEIGHTS,
         "regime_config": shared_config.REGIMES[regime],
+        "environment_source_sha256": {
+            str(path.relative_to(ROOT_DIR)): hashlib.sha256(path.read_bytes()).hexdigest()
+            for path in source_files
+        },
     }
     return hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()[:16]
 

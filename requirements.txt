@@ -20,3 +20,7 @@ onnxruntime>=1.17.0
 # Testing & Reproducibility
 pytest>=8.0.0
 PyYAML>=5.3.1
+sacred>=0.8.7,<0.9
+# Torch declares this runtime requirement; listing it explicitly keeps fresh
+# environments from passing installation but failing ``pip check``.
+setuptools>=77.0.3

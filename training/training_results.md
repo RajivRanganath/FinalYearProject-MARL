@@ -1,4 +1,10 @@
-# MARL Training & Empirical Benchmark Results Summary
+# Historical Benchmark Snapshot (Superseded)
+
+> These pre-repair MLP/oracle-era numbers are retained for history only. They
+> are not the current causal benchmark and must not be cited as final results.
+> Use `FINAL_RESEARCH_REPORT.md` and the frozen v2/v3 result directories.
+
+# Legacy MARL Training & Empirical Benchmark Results Summary
 
 This document records the empirical results of training Multi-Agent Reinforcement Learning (MARL) algorithms (**QMIX**, **VDN**, **IQL**) against standard baseline heuristics across 30 held-out Monte Carlo test seeds (`1001`–`1030`) and 3 environmental regimes (`stable`, `volatile`, `stress`).
 

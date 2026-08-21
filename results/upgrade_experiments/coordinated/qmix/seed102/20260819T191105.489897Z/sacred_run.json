@@ -1,0 +1,145 @@
+{
+  "artifacts": [],
+  "command": "my_main",
+  "experiment": {
+    "base_dir": "/Users/rajiv/Desktop/FinalYearProject-MARL/training/epymarl/src",
+    "dependencies": [
+      "numpy==2.5.2",
+      "pyyaml==5.3.1",
+      "sacred==0.8.7",
+      "torch==2.13.0"
+    ],
+    "mainfile": "main.py",
+    "name": "pymarl",
+    "repositories": [
+      {
+        "commit": "2d920fa26d1781341a1f260b7d8309fadb134d87",
+        "dirty": true,
+        "url": "git@github.com:RajivRanganath/FinalYearProject-MARL.git"
+      },
+      {
+        "commit": "2d920fa26d1781341a1f260b7d8309fadb134d87",
+        "dirty": true,
+        "url": "git@github.com:RajivRanganath/FinalYearProject-MARL.git"
+      },
+      {
+        "commit": "2d920fa26d1781341a1f260b7d8309fadb134d87",
+        "dirty": true,
+        "url": "git@github.com:RajivRanganath/FinalYearProject-MARL.git"
+      }
+    ],
+    "sources": [
+      [
+        "main.py",
+        "_sources/main_754e3e09e8f78daf878b90824fef8fe3.py"
+      ],
+      [
+        "run.py",
+        "_sources/run_826a700cb1b97fa77b0c21be22055a8e.py"
+      ],
+      [
+        "utils/logging.py",
+        "_sources/logging_80685d67fab61f6e71e93fbe28085531.py"
+      ]
+    ]
+  },
+  "heartbeat": "2026-08-19T19:19:56.353085",
+  "host": {
+    "ENV": {},
+    "cpu": "Apple M4",
+    "hostname": "Rajivs-MacBook-Air.local",
+    "os": [
+      "Darwin",
+      "macOS-15.7.7-arm64-arm-64bit"
+    ],
+    "python_version": "3.12.13"
+  },
+  "meta": {
+    "command": "my_main",
+    "config_updates": {
+      "batch_size": 32,
+      "buffer_size": 1000,
+      "checkpoint_path": "/Users/rajiv/Desktop/FinalYearProject-MARL/results/upgrade_experiments/coordinated/qmix/seed102/20260819T181142.512841Z/models/qmix_seed102_iot_coordinated_2026-08-19 23:41:44.251598",
+      "env_args": {
+        "ablation": "full",
+        "map_name": "iot_coordinated",
+        "mask_neighbor_signal": true,
+        "regime": "coordinated",
+        "scenario": "volatile"
+      },
+      "epsilon_anneal_time": 125999,
+      "epsilon_finish": 0.02,
+      "gamma": 0.95,
+      "hidden_dim": 64,
+      "load_step": 0,
+      "local_results_path": "/Users/rajiv/Desktop/FinalYearProject-MARL/results/upgrade_experiments/coordinated/qmix/seed102/20260819T191105.489897Z",
+      "lr": 0.0003,
+      "obs_agent_id": false,
+      "save_model": true,
+      "save_model_interval": 18000,
+      "seed": 102,
+      "t_max": 360000,
+      "target_update_interval_or_tau": 0.01,
+      "test_interval": 18000,
+      "updates_per_episode": 2,
+      "use_cuda": false
+    },
+    "named_configs": [],
+    "options": {
+      "--beat-interval": null,
+      "--capture": null,
+      "--comment": null,
+      "--debug": false,
+      "--enforce_clean": false,
+      "--file_storage": null,
+      "--force": false,
+      "--help": false,
+      "--id": null,
+      "--loglevel": null,
+      "--mongo_db": null,
+      "--name": null,
+      "--pdb": false,
+      "--print-config": false,
+      "--priority": null,
+      "--queue": false,
+      "--s3": null,
+      "--sql": null,
+      "--tiny_db": null,
+      "--unobserved": false,
+      "COMMAND": null,
+      "UPDATE": [
+        "seed=102",
+        "t_max=360000",
+        "lr=0.0003",
+        "gamma=0.95",
+        "use_cuda=False",
+        "batch_size=32",
+        "buffer_size=1000",
+        "hidden_dim=64",
+        "updates_per_episode=2",
+        "target_update_interval_or_tau=0.01",
+        "epsilon_anneal_time=125999",
+        "epsilon_finish=0.02",
+        "save_model=True",
+        "save_model_interval=18000",
+        "test_interval=18000",
+        "env_args.scenario=volatile",
+        "env_args.regime=coordinated",
+        "env_args.ablation=full",
+        "env_args.mask_neighbor_signal=True",
+        "env_args.map_name=iot_coordinated",
+        "obs_agent_id=False",
+        "local_results_path=/Users/rajiv/Desktop/FinalYearProject-MARL/results/upgrade_experiments/coordinated/qmix/seed102/20260819T191105.489897Z",
+        "checkpoint_path=/Users/rajiv/Desktop/FinalYearProject-MARL/results/upgrade_experiments/coordinated/qmix/seed102/20260819T181142.512841Z/models/qmix_seed102_iot_coordinated_2026-08-19 23:41:44.251598",
+        "load_step=0"
+      ],
+      "help": false,
+      "with": true
+    }
+  },
+  "resources": [],
+  "result": null,
+  "start_time": "2026-08-19T19:11:07.133268",
+  "status": "COMPLETED",
+  "stop_time": "2026-08-19T19:19:56.343911"
+}

@@ -4,6 +4,7 @@ env_args:
   scenario: "volatile"
   regime: "independent"
   ablation: "full"
+  mask_neighbor_signal: False
   map_name: "iot_sensor"
 
 test_greedy: True

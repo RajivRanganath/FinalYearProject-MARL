@@ -178,6 +178,335 @@ def _ablation_interpretation() -> str:
     )
 
 
+def _training_upgrade_section() -> str:
+    """Render the optional post-report upgrade strictly from saved artifacts."""
+    root = ROOT_DIR / "results" / "training_upgrade" / "coordinated"
+    manifest_path = ROOT_DIR / "results" / "upgrade_experiments" / "training_manifest_improved_full.json"
+    if not (root / "summary.csv").exists() or not manifest_path.exists():
+        return ""
+    summary = pd.read_csv(root / "summary.csv").set_index("policy")
+    comparisons = pd.read_csv(root / "paired_comparisons.csv")
+    manifest = json.loads(manifest_path.read_text())
+    validation = ", ".join(
+        f"seed {run['seed']}: {run['selected_checkpoint']['mean_team_reward']:.2f}"
+        for run in sorted(manifest, key=lambda item: item["seed"])
+    )
+    rows = [
+        "## Post-report validation-driven training upgrade\n\n",
+        "After the original benchmark was frozen, a separate training-only upgrade fixed terminal checkpoint loss, increased replay updates for 288-step episodes, and used the homogeneous shared-policy configuration supported by the earlier ablations. ",
+        "No environment physics, reward weight, baseline, or original test result was changed. The three selected validation rewards were ",
+        f"{validation}. Because seeds 1001--1030 had already informed the ablation analysis, the upgraded claim uses the predeclared fresh holdout 2001--2030.\n\n",
+        "| Policy | Reward [95% CI] | Recall [95% CI] | Energy [95% CI] | Mean AoI [95% CI] |\n",
+        "|---|---:|---:|---:|---:|\n",
+    ]
+    for policy in ("Published QMIX", "Upgraded QMIX", "Entropy Threshold"):
+        row = summary.loc[policy]
+        rows.append(
+            f"| {policy} | {row.raw_episode_reward_mean:.2f} "
+            f"[{row.raw_episode_reward_ci95_low:.2f}, {row.raw_episode_reward_ci95_high:.2f}] | "
+            f"{row.event_recall_mean:.3f} [{row.event_recall_ci95_low:.3f}, {row.event_recall_ci95_high:.3f}] | "
+            f"{row.total_energy_consumption_mean:.2f} "
+            f"[{row.total_energy_consumption_ci95_low:.2f}, {row.total_energy_consumption_ci95_high:.2f}] | "
+            f"{row.mean_aoi_mean:.2f} [{row.mean_aoi_ci95_low:.2f}, {row.mean_aoi_ci95_high:.2f}] |\n"
+        )
+    published_reward = comparisons[
+        (comparisons.comparator == "Published QMIX")
+        & (comparisons.metric == "raw_episode_reward")
+    ].iloc[0]
+    threshold_reward = comparisons[
+        (comparisons.comparator == "Entropy Threshold")
+        & (comparisons.metric == "raw_episode_reward")
+    ].iloc[0]
+    rows.extend([
+        "\nThe upgraded policy gains ",
+        f"{published_reward.upgraded_engineering_advantage_mean:.2f} paired reward units over published QMIX "
+        f"(95% CI {published_reward.upgraded_engineering_advantage_ci95_low:.2f} to "
+        f"{published_reward.upgraded_engineering_advantage_ci95_high:.2f}; "
+        f"p={published_reward.p_value:.2e}, dz={published_reward.paired_cohens_dz:.2f}). ",
+        "It nevertheless remains behind the causal threshold by ",
+        f"{-threshold_reward.upgraded_engineering_advantage_mean:.2f} reward units "
+        f"(p={threshold_reward.p_value:.2e}). The upgrade therefore strengthens QMIX substantially without changing the central negative-result conclusion. ",
+        "Full paired confidence intervals and effect sizes are in [the training-upgrade report](results/training_upgrade/coordinated/REPORT.md).\n\n",
+    ])
+    return "".join(rows)
+
+
+def _extended_training_section() -> str:
+    """Render the split-locked continuation experiment from frozen artifacts."""
+    root = ROOT_DIR / "results" / "training_v2"
+    final_root = root / "final"
+    selection_path = root / "selection" / "selection_decision.json"
+    extended_manifest_path = (
+        ROOT_DIR / "results" / "upgrade_experiments" / "training_manifest_extended_full.json"
+    )
+    identity_manifest_path = (
+        ROOT_DIR / "results" / "upgrade_experiments" / "training_manifest_improved_v2_full.json"
+    )
+    required = [
+        final_root / "summary.csv",
+        final_root / "paired_comparisons.csv",
+        final_root / "per_training_seed.csv",
+        final_root / "evaluation_manifest.json",
+        selection_path,
+        extended_manifest_path,
+    ]
+    if not all(path.exists() for path in required):
+        return ""
+
+    summary = pd.read_csv(final_root / "summary.csv").set_index("policy")
+    comparisons = pd.read_csv(final_root / "paired_comparisons.csv")
+    per_training_seed = pd.read_csv(final_root / "per_training_seed.csv")
+    selection = json.loads(selection_path.read_text())
+    final_manifest = json.loads((final_root / "evaluation_manifest.json").read_text())
+    extended_manifest = json.loads(extended_manifest_path.read_text())
+
+    selected = ", ".join(
+        f"seed {run['seed']}: step {Path(run['selected_checkpoint']['checkpoint']).name}, "
+        f"reward {run['selected_checkpoint']['mean_team_reward']:.2f}"
+        for run in sorted(extended_manifest, key=lambda item: item["seed"])
+    )
+    replica_rewards = per_training_seed[
+        per_training_seed.policy == "Extended QMIX"
+    ].sort_values("training_seed")
+    replica_text = ", ".join(
+        f"seed {int(row.training_seed)}: {row.raw_episode_reward_mean:.2f}"
+        for _, row in replica_rewards.iterrows()
+    )
+
+    def comparison(comparator: str, metric: str) -> pd.Series:
+        return comparisons[
+            (comparisons.comparator == comparator) & (comparisons.metric == metric)
+        ].iloc[0]
+
+    improved_reward = comparison("Improved QMIX", "raw_episode_reward")
+    threshold_reward = comparison("Entropy Threshold", "raw_episode_reward")
+    threshold_recall = comparison("Entropy Threshold", "event_recall")
+    threshold_energy = comparison("Entropy Threshold", "total_energy_consumption")
+    threshold_aoi = comparison("Entropy Threshold", "mean_aoi")
+
+    rows = [
+        "## Split-locked extended-training result\n\n",
+        "A further one-factor experiment restored agent identity while keeping the 180k-step configuration fixed. It was screened out after the first training replica: ",
+    ]
+    if identity_manifest_path.exists():
+        identity_manifest = json.loads(identity_manifest_path.read_text())
+        identity_validation = identity_manifest[0]["selected_checkpoint"]["mean_team_reward"]
+        improved_manifest = json.loads(
+            (ROOT_DIR / "results" / "upgrade_experiments" / "training_manifest_improved_full.json").read_text()
+        )
+        improved_seed101 = next(run for run in improved_manifest if run["seed"] == 101)
+        improved_validation = improved_seed101["selected_checkpoint"]["mean_team_reward"]
+        rows.append(
+            f"its seed-101 validation reward was {identity_validation:.2f}, versus "
+            f"{improved_validation:.2f} for the matched no-identity model. "
+        )
+    rows.extend([
+        "The retained hypothesis changed only training duration: each of the three no-identity QMIX replicas was warm-started from its validation-selected 180k checkpoint and trained to a 360k horizon. Replay, RNG progress, learner counters, and target history were not restored. ",
+        f"Validation selected {selected}; seed 103 was selected before the terminal checkpoint rather than automatically taking the last model.\n\n",
+        "The predeclared promotion gate used only selection seeds 211--230 and required both a positive mean reward difference and improvement in every matched training replica. It passed with replica advantages ",
+        ", ".join(
+            f"seed {seed}: {advantage:.2f}"
+            for seed, advantage in selection["reward_advantage_by_training_seed"].items()
+        ),
+        f" (mean {selection['mean_reward_advantage']:.2f}). Only then was the untouched final split 3001--3030 evaluated once.\n\n",
+        "| Policy | Reward [95% CI] | Recall | Energy | Mean AoI | Redundant samples |\n",
+        "|---|---:|---:|---:|---:|---:|\n",
+    ])
+    for policy in ("Published QMIX", "Improved QMIX", "Extended QMIX", "Entropy Threshold"):
+        row = summary.loc[policy]
+        rows.append(
+            f"| {policy} | {row.raw_episode_reward_mean:.2f} "
+            f"[{row.raw_episode_reward_ci95_low:.2f}, {row.raw_episode_reward_ci95_high:.2f}] | "
+            f"{row.event_recall_mean:.3f} | {row.total_energy_consumption_mean:.2f} | "
+            f"{row.mean_aoi_mean:.2f} | {row.redundant_sampling_mean:.2f} |\n"
+        )
+    rows.extend([
+        "\nExtended QMIX improved over Improved QMIX by ",
+        f"{improved_reward.extended_engineering_advantage_mean:.2f} paired reward units; its two-way bootstrap 95% interval was "
+        f"[{improved_reward.two_way_bootstrap_ci95_low:.2f}, {improved_reward.two_way_bootstrap_ci95_high:.2f}] and Holm-adjusted p={improved_reward.p_value_holm:.2e}. ",
+        f"Final reward was stable across the three training replicas ({replica_text}). ",
+        "The stronger training result still did not beat the threshold: Extended QMIX was worse by ",
+        f"{-threshold_reward.extended_engineering_advantage_mean:.2f} reward units (Holm p={threshold_reward.p_value_holm:.2e}), "
+        f"{abs(threshold_recall.extended_engineering_advantage_mean):.3f} recall, and "
+        f"{abs(threshold_energy.extended_engineering_advantage_mean):.2f} energy units, while improving mean AoI by "
+        f"{threshold_aoi.extended_engineering_advantage_mean:.2f}. The final environment seeds are now consumed and frozen; they must not be used for further selection or tuning. ",
+        "See [the frozen final report](results/training_v2/final/REPORT.md).\n\n",
+        "The final manifest records the exact 30 seeds plus SHA-256 fingerprints for 12 primary model files and six listed evaluation/source files. A later dependency-closure audit found that those six hashes omitted behavior-changing transitive files, including the energy model and PettingZoo wrapper. The frozen numbers remain internally reproducible from their raw CSVs, but the fingerprint claim is partial rather than complete. "
+        f"It records Git SHA `{final_manifest['git_sha']}` and the worktree-dirty disclosure.\n\n",
+    ])
+    return "".join(rows)
+
+
+def _ensemble_deployment_section() -> str:
+    """Render the frozen v3 deployment-ensemble result."""
+    root = ROOT_DIR / "results" / "training_v3"
+    required = [
+        root / "selection" / "selection_decision.json",
+        root / "selection" / "candidate_comparisons.csv",
+        root / "final" / "summary.csv",
+        root / "final" / "candidate_comparisons.csv",
+        root / "final" / "evaluation_manifest.json",
+        root / "audit.json",
+    ]
+    if not all(path.exists() for path in required):
+        return ""
+    decision = json.loads(required[0].read_text())
+    selection_comparisons = pd.read_csv(required[1])
+    summary = pd.read_csv(required[2]).set_index("policy")
+    comparisons = pd.read_csv(required[3])
+
+    def comparison(comparator: str, metric: str) -> pd.Series:
+        return comparisons[
+            (comparisons.comparator == comparator) & (comparisons.metric == metric)
+        ].iloc[0]
+
+    reference_reward = comparison("Extended QMIX Replica Mean", "raw_episode_reward")
+    threshold_reward = comparison("Entropy Threshold", "raw_episode_reward")
+    threshold_recall = comparison("Entropy Threshold", "event_recall")
+    threshold_energy = comparison("Entropy Threshold", "total_energy_consumption")
+    threshold_aoi = comparison("Entropy Threshold", "mean_aoi")
+    threshold_redundancy = comparison("Entropy Threshold", "redundant_sampling")
+    selection_evidence = decision["candidate_evidence"]["QMIX Unanimous Ensemble"]
+    selection_reward = selection_comparisons[
+        (selection_comparisons.candidate == "QMIX Unanimous Ensemble")
+        & (selection_comparisons.comparator == "Extended QMIX Replica Mean")
+        & (selection_comparisons.metric == "raw_episode_reward")
+    ].iloc[0]
+    rows = [
+        "## Split-locked deployment ensemble\n\n",
+        "A final bounded iteration left all trained weights, environment dynamics, and reward terms unchanged. It predeclared two scale-independent deployment rules over the three Extended QMIX replicas: majority voting and unanimous voting for SAMPLE. Selection seeds 231--250 rejected majority voting because its reward interval crossed zero. Unanimous voting passed every promotion gate, gaining ",
+        f"{selection_evidence['reward_advantage']:.2f} reward units with selection CI "
+        f"[{selection_reward.ci95_low:.2f}, {selection_reward.ci95_high:.2f}], while also improving recall, energy, and redundancy. Only that rule was evaluated on the untouched final seeds 4001--4030.\n\n",
+        "The historical promotion predicate reported but did not require the candidate-family Holm-adjusted reward p-value. The selected unanimous rule nevertheless has ",
+        f"`p_holm = {selection_evidence['reward_p_holm']:.2e}` and passes the corrected future guard, so this omission does not change the frozen winner or final result.\n\n",
+        "| Policy | Reward | Recall | Energy | Mean AoI | Redundant samples |\n",
+        "|---|---:|---:|---:|---:|---:|\n",
+    ]
+    for policy in (
+        "Extended QMIX Replica Mean",
+        "QMIX Unanimous Ensemble",
+        "Entropy Threshold",
+        "Battery + Entropy",
+    ):
+        row = summary.loc[policy]
+        rows.append(
+            f"| {policy} | {row.raw_episode_reward_mean:.2f} | {row.event_recall_mean:.3f} | "
+            f"{row.total_energy_consumption_mean:.2f} | {row.mean_aoi_mean:.2f} | "
+            f"{row.redundant_sampling_mean:.2f} |\n"
+        )
+    rows.extend([
+        "\nOn the final split, unanimous voting improved over the Extended replica mean by ",
+        f"{reference_reward.engineering_advantage_mean:.2f} reward units "
+        f"(95% CI [{reference_reward.ci95_low:.2f}, {reference_reward.ci95_high:.2f}], "
+        f"Holm p={reference_reward.p_value_holm:.2e}). It also improved recall, energy, redundancy, and coverage, but worsened AoI by 0.11. ",
+        "Relative to the threshold, the remaining reward difference was ",
+        f"{threshold_reward.engineering_advantage_mean:.2f} "
+        f"(95% CI [{threshold_reward.ci95_low:.2f}, {threshold_reward.ci95_high:.2f}], "
+        f"Holm p={threshold_reward.p_value_holm:.3f}); this is neither evidence of a reward win nor an equivalence test. Recall differed by only "
+        f"{threshold_recall.engineering_advantage_mean:.3f} with an interval crossing zero. The ensemble retained a clear "
+        f"{abs(threshold_energy.engineering_advantage_mean):.2f}-unit energy disadvantage and "
+        f"{abs(threshold_redundancy.engineering_advantage_mean):.2f} additional redundant samples, while its AoI was "
+        f"{threshold_aoi.engineering_advantage_mean:.2f} lower.\n\n",
+        "The ensemble requires three recurrent-model evaluations per decision, approximately tripling model storage and inference work relative to one QMIX replica. Its final intervals vary environment seeds but condition on this one selected three-model set, so they do not measure variability across independently retrained ensembles. It is therefore a stronger simulation/deployment policy but not automatically a better TinyML choice. The final seeds are consumed and frozen. See [the v3 final report](results/training_v3/final/REPORT.md) and [artifact audit](results/training_v3/audit.json).\n\n",
+    ])
+    return "".join(rows)
+
+
+def _refined_training_section() -> str:
+    """Render the strict, rejected weight-update experiment."""
+    root = ROOT_DIR / "results" / "training_v4" / "selection"
+    decision_path = root / "selection_decision.json"
+    summary_path = root / "summary.csv"
+    seed_path = root / "per_training_seed.csv"
+    if not all(path.exists() for path in (decision_path, summary_path, seed_path)):
+        return ""
+    decision = json.loads(decision_path.read_text())
+    summary = pd.read_csv(summary_path).set_index("policy")
+    seed_summary = pd.read_csv(seed_path)
+    evidence = decision["evidence"]
+    rows = [
+        "## Strict weight-update attempt: invalidated protocol and not promoted\n\n",
+        "Refined QMIX was intended to be a `1e-4` continuation of all three Extended checkpoints to a 540k-step horizon. A later artifact-level audit found that `Optimizer.load_state_dict` restored the source checkpoint parameter-group rate after the new optimizer was constructed. Every one of the 37 Refined `opt.th` files, including all three selected checkpoints, records `3e-4`. The run therefore did **not** test the declared low-learning-rate hypothesis. A separate resume audit did correctly resolve seed 103 to its validation-selected source step 289440.\n\n",
+        "| Policy | Reward | Recall | Energy | Mean AoI | Redundancy |\n",
+        "|---|---:|---:|---:|---:|---:|\n",
+    ]
+    for policy in ("Extended QMIX", "Refined QMIX", "Entropy Threshold"):
+        row = summary.loc[policy]
+        rows.append(
+            f"| {policy} | {row.raw_episode_reward_mean:.2f} | {row.event_recall_mean:.3f} | "
+            f"{row.total_energy_consumption_mean:.2f} | {row.mean_aoi_mean:.2f} | "
+            f"{row.redundant_sampling_mean:.2f} |\n"
+        )
+    replica = seed_summary.pivot(index="training_seed", columns="policy", values="raw_episode_reward_mean")
+    advantages = ", ".join(
+        f"seed {int(seed)}: {row['Refined QMIX'] - row['Extended QMIX']:+.2f}"
+        for seed, row in replica.iterrows()
+    )
+    rows.extend([
+        "\nThe historical same-rate selection calculation improved by ",
+        f"{evidence['mean_reward_advantage']:.2f} and the environment-seed CI lower bound was "
+        f"{evidence['reward_environment_ci95_low']:.2f}. However, the two-way bootstrap lower bound was "
+        f"{evidence['reward_two_way_bootstrap_ci95_low']:.2f}, and matched replica advantages were {advantages}. "
+        "Because seed 102 regressed and the bootstrap crossed zero, the predeclared all-replica gate rejected the candidate even before the LR defect was discovered. These numbers now describe only a rejected same-rate warm-start and cannot answer the low-LR question. Locked seeds 5001--5030 were not evaluated. See [the invalidation record](results/training_v4/INVALIDATED.json); the original [selection report](results/training_v4/selection/REPORT.md) is retained as a frozen historical artifact whose low-LR sentence is superseded.\n\n",
+    ])
+    return "".join(rows)
+
+
+def _source_drift_section() -> str:
+    """Render the post-hoc source-repair disclosure from its own artifacts."""
+    drift = json.loads((ROOT_DIR / "results" / "environment_drift.json").read_text())
+    impact = json.loads((ROOT_DIR / "results" / "environment_drift_impact.json").read_text())
+    feasibility = next(
+        item for item in drift["repairs"]
+        if item["id"] == "sample_feasibility_charges_same_step_background_energy"
+    )
+    rows = [
+        "## Source drift after the results were produced\n\n",
+        "Two source repairs postdate every run and every evaluation in this repository, so the "
+        "committed source does not bit-exactly regenerate the committed numbers. The larger repair "
+        f"changes SAMPLE feasibility from `{feasibility['legacy_rule']}` to "
+        f"`{feasibility['repaired_rule']}`, because the previous rule admitted a sample without "
+        "accounting for the unavoidable same-step sleep and proxy-monitor draw. It governs the action "
+        "mask for every agent in every run.\n\n",
+        "The gap is measured rather than assumed. The probe replays the real environment under both "
+        "rules on the same 30 held-out seeds, using the policy that saturates the battery floor and "
+        "therefore bounds how far the rules can diverge.\n\n",
+        "| Regime | Mean reward delta | Max abs delta | Seeds differing | Agent-steps in disagreement band |\n",
+        "|---|---:|---:|---:|---:|\n",
+    ]
+    for entry in impact["regimes"]:
+        rows.append(
+            f"| {entry['regime']} | {entry['mean_reward_delta_repaired_minus_legacy']:+.4f} | "
+            f"{entry['max_abs_reward_delta']:.4f} | "
+            f"{entry['seeds_with_any_difference']}/{len(entry['seeds'])} | "
+            f"{entry['agent_steps_inside_disagreement_band']}/{entry['episode_agent_steps']} "
+            f"({100 * entry['disagreement_band_fraction']:.3f}%) |\n"
+        )
+    rows.extend([
+        "\nThe two rules can only disagree while the battery sits inside a band "
+        f"{100 * impact['disagreement_band_width']:.3f}% of capacity wide. Against a headline "
+        "Extended-versus-Improved effect of 27.67 reward units with a bootstrap interval of "
+        "[23.27, 32.31], no reported comparison changes sign or loses significance. The results are "
+        "therefore disclosed rather than invalidated.\n\n",
+        "The second repair synchronises the resumed learner's target mixer and reapplies the "
+        "configured learning rate after optimizer-state restore. Because these runs were launched "
+        "from a disclosed dirty worktree and the manifests recorded only a base SHA and a dirty flag, "
+        "the learner source used by any historical run is not recoverable. The logged TD loss shows "
+        "no spike at the resume boundary where an unsynchronised target mixer would perturb targets "
+        "by roughly four reward units, which is consistent with the synchronisation having been "
+        "present, but that is evidence rather than proof. Manifests now record "
+        "`training_source_sha256` so the ambiguity cannot recur.\n\n",
+        "One consequence is load-bearing. The resume resolver accepts only manifest entries whose "
+        "configuration digest matches the current gate, and the Extended manifests carry the "
+        "pre-repair digest, so a corrected low-learning-rate continuation from Extended now fails by "
+        "design. It needs Extended retrained under the repaired environment, or an explicitly "
+        "recorded decision to warm-start across the repair; fresh seeds alone are not sufficient. "
+        "See [the drift record](results/environment_drift.json) and "
+        "[its measured impact](results/environment_drift_impact.json).\n\n",
+    ])
+    return "".join(rows)
+
+
 def build_report() -> Path:
     summaries: Dict[str, pd.DataFrame] = {
         regime: pd.read_csv(ROOT_DIR / "results" / "final" / regime / "benchmark_summary.csv")
@@ -196,7 +525,7 @@ def build_report() -> Path:
     text = [
         "# Final Research Report: When Does Cooperative MARL Help Energy-Harvesting Sensor Networks?\n\n",
         "## Executive finding\n\n",
-        "No advantage from QMIX over the strongest causal adaptive heuristic was observed in either evaluated regime. ",
+        "No overall engineering advantage from QMIX over the strongest causal adaptive heuristic was observed in either evaluated regime. ",
         "The learned policies were repaired from an Always-Sleep collapse and all selected checkpoints demonstrably chose both actions, ",
         "but the causal event-proxy threshold remained better on reward, event recall, energy use, and AoI. ",
         f"In the independent regime, the best learned policy was {headline['independent']['best_learned'].policy} "
@@ -204,7 +533,12 @@ def build_report() -> Path:
         f"({headline['independent']['threshold'].raw_episode_reward_mean:.2f}). In the coordinated regime, the best learned policy was "
         f"{headline['coordinated']['best_learned'].policy} ({headline['coordinated']['best_learned'].raw_episode_reward_mean:.2f}) "
         f"versus the threshold policy ({headline['coordinated']['threshold'].raw_episode_reward_mean:.2f}). ",
-        "The coordinated regime therefore created genuine inter-agent dependence, but not enough complexity for value decomposition to beat a well-aligned local proxy rule at this training budget and network scale.\n\n",
+        "The coordinated regime therefore created genuine inter-agent dependence, but not enough complexity for value decomposition to beat a well-aligned local proxy rule at the original training budget and network scale. A later split-locked continuation substantially improved QMIX. A separately locked unanimous-vote deployment ensemble then closed the reward gap to a statistically unresolved 2.27 units and had a slightly higher but statistically unresolved recall point estimate, while still using more energy and producing more redundant samples than the threshold.\n\n",
+        _training_upgrade_section(),
+        _extended_training_section(),
+        _ensemble_deployment_section(),
+        _refined_training_section(),
+        _source_drift_section(),
         "## 1. Research question and non-predetermined protocol\n\n",
         "The study asks when cooperative MARL provides an advantage over simple adaptive heuristics. It does not assume that QMIX should win. ",
         "Regime A uses independent event processes and unconstrained per-agent delivery. Regime B uses a two-packet shared channel, persistent spatially correlated events, ring-neighbor redundancy, heterogeneous energy trajectories, and network-coverage utility. ",
@@ -287,7 +621,7 @@ def build_report() -> Path:
         "venv/bin/python deployment/build_final_report.py\n",
         "venv/bin/python deployment/write_provenance.py\n",
         "venv/bin/python deployment/audit_final_artifacts.py\n",
-        "venv/bin/pytest -q\n",
+        "venv/bin/python -m pytest -q\n",
         "```\n",
     ])
     output = ROOT_DIR / "FINAL_RESEARCH_REPORT.md"

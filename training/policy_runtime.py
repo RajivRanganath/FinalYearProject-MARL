@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 import sys
 from types import SimpleNamespace
-from typing import Dict
+from typing import Any, Dict, Iterable
 
 import numpy as np
 import onnxruntime as ort
@@ -113,3 +113,25 @@ class ONNXPolicy:
         q = self.q_values(agent_id, obs).copy()
         q[np.asarray(info.get("action_mask", [1, 1])) == 0] = -np.inf
         return int(np.argmax(q))
+
+
+class ObservationMaskPolicy:
+    """Apply a saved policy's declared observation mask at deployment time."""
+
+    def __init__(self, policy: Any, masked_indices: Iterable[int] = ()):
+        self.policy = policy
+        self.masked_indices = tuple(int(index) for index in masked_indices)
+        self.train_seed = getattr(policy, "train_seed", None)
+
+    def reset(self) -> None:
+        self.policy.reset()
+
+    @property
+    def last_q(self) -> Dict[str, np.ndarray]:
+        return self.policy.last_q
+
+    def select_action(self, agent_id: str, obs: np.ndarray, info: dict) -> int:
+        decision_obs = np.asarray(obs, dtype=np.float32).copy()
+        for index in self.masked_indices:
+            decision_obs[index] = 0.0
+        return self.policy.select_action(agent_id, decision_obs, info)

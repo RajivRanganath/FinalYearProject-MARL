@@ -21,7 +21,7 @@ if str(ROOT_DIR) not in sys.path:
 
 from hardware_eval.model_analysis import analyze_marl_policy
 
-# Constants based on published TensorFlow Lite for Microcontrollers (TFLM) benchmarks
+# Planning assumptions only. A real converted graph/build must replace these.
 TFLM_FLASH_RUNTIME_OVERHEAD_KB = 120.0  # Core TFLite Micro runtime code footprint
 TFLM_SRAM_INTERPRETER_OVERHEAD_KB = 16.0 # Core tensor arena & interpreter working memory
 
@@ -38,7 +38,7 @@ def evaluate_memory_footprint(specs_path: str = "hardware_eval/device_specs.json
 
     devices = db["devices"]
     model_stats = analyze_marl_policy()
-    int8_weights_kb = model_stats["int8_weight_memory_kb"]
+    int8_weights_kb = model_stats["projected_int8_weight_memory_kb"]
 
     results = {}
 
@@ -47,7 +47,9 @@ def evaluate_memory_footprint(specs_path: str = "hardware_eval/device_specs.json
         avail_flash_kb = dev["flash_mb"] * 1024.0
 
         # Required memory
-        required_sram_kb = TFLM_SRAM_INTERPRETER_OVERHEAD_KB + (model_stats["peak_activation_memory_int8_bytes"] / 1024.0)
+        required_sram_kb = TFLM_SRAM_INTERPRETER_OVERHEAD_KB + (
+            model_stats["largest_activation_tensor_int8_bytes_lower_bound"] / 1024.0
+        ) + (model_stats["recurrent_state_fp32_bytes"] / 1024.0)
         required_flash_kb = TFLM_FLASH_RUNTIME_OVERHEAD_KB + int8_weights_kb
 
         # Feasibility check
@@ -68,8 +70,14 @@ def evaluate_memory_footprint(specs_path: str = "hardware_eval/device_specs.json
             "available_flash_kb": avail_flash_kb,
             "required_flash_kb": round(required_flash_kb, 2),
             "flash_utilization_pct": round(flash_utilization_pct, 2),
+            "is_feasible_by_analytical_memory_bound": is_feasible,
             "is_feasible": is_feasible,
-            "feasibility_notes": "Feasible with abundant headroom" if is_feasible else "Infeasible: Exceeds device memory"
+            "analytical_only": True,
+            "feasibility_notes": (
+                "Estimated memory fit; conversion, operators, tensor arena, and target build unverified"
+                if is_feasible
+                else "Analytical memory bound exceeds device capacity"
+            ),
         }
 
     return results

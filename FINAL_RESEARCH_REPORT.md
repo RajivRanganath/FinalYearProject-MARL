@@ -2,7 +2,82 @@
 
 ## Executive finding
 
-No advantage from QMIX over the strongest causal adaptive heuristic was observed in either evaluated regime. The learned policies were repaired from an Always-Sleep collapse and all selected checkpoints demonstrably chose both actions, but the causal event-proxy threshold remained better on reward, event recall, energy use, and AoI. In the independent regime, the best learned policy was VDN (reward 9.50) versus the threshold policy (190.28). In the coordinated regime, the best learned policy was QMIX (24.38) versus the threshold policy (159.03). The coordinated regime therefore created genuine inter-agent dependence, but not enough complexity for value decomposition to beat a well-aligned local proxy rule at this training budget and network scale.
+No overall engineering advantage from QMIX over the strongest causal adaptive heuristic was observed in either evaluated regime. The learned policies were repaired from an Always-Sleep collapse and all selected checkpoints demonstrably chose both actions, but the causal event-proxy threshold remained better on reward, event recall, energy use, and AoI. In the independent regime, the best learned policy was VDN (reward 9.50) versus the threshold policy (190.28). In the coordinated regime, the best learned policy was QMIX (24.38) versus the threshold policy (159.03). The coordinated regime therefore created genuine inter-agent dependence, but not enough complexity for value decomposition to beat a well-aligned local proxy rule at the original training budget and network scale. A later split-locked continuation substantially improved QMIX. A separately locked unanimous-vote deployment ensemble then closed the reward gap to a statistically unresolved 2.27 units and had a slightly higher but statistically unresolved recall point estimate, while still using more energy and producing more redundant samples than the threshold.
+
+## Post-report validation-driven training upgrade
+
+After the original benchmark was frozen, a separate training-only upgrade fixed terminal checkpoint loss, increased replay updates for 288-step episodes, and used the homogeneous shared-policy configuration supported by the earlier ablations. No environment physics, reward weight, baseline, or original test result was changed. The three selected validation rewards were seed 101: 127.12, seed 102: 123.35, seed 103: 121.57. Because seeds 1001--1030 had already informed the ablation analysis, the upgraded claim uses the predeclared fresh holdout 2001--2030.
+
+| Policy | Reward [95% CI] | Recall [95% CI] | Energy [95% CI] | Mean AoI [95% CI] |
+|---|---:|---:|---:|---:|
+| Published QMIX | 21.94 [6.64, 37.24] | 0.456 [0.438, 0.475] | 14.15 [13.84, 14.46] | 8.90 [8.62, 9.18] |
+| Upgraded QMIX | 123.18 [106.57, 139.80] | 0.567 [0.549, 0.585] | 12.98 [12.57, 13.40] | 5.33 [4.98, 5.68] |
+| Entropy Threshold | 168.22 [151.37, 185.07] | 0.607 [0.591, 0.623] | 11.20 [10.66, 11.74] | 5.56 [5.25, 5.87] |
+
+The upgraded policy gains 101.25 paired reward units over published QMIX (95% CI 93.36 to 109.13; p=9.25e-22, dz=4.79). It nevertheless remains behind the causal threshold by 45.04 reward units (p=2.23e-15). The upgrade therefore strengthens QMIX substantially without changing the central negative-result conclusion. Full paired confidence intervals and effect sizes are in [the training-upgrade report](results/training_upgrade/coordinated/REPORT.md).
+
+## Split-locked extended-training result
+
+A further one-factor experiment restored agent identity while keeping the 180k-step configuration fixed. It was screened out after the first training replica: its seed-101 validation reward was 121.12, versus 127.12 for the matched no-identity model. The retained hypothesis changed only training duration: each of the three no-identity QMIX replicas was warm-started from its validation-selected 180k checkpoint and trained to a 360k horizon. Replay, RNG progress, learner counters, and target history were not restored. Validation selected seed 101: step 360288, reward 155.89, seed 102: step 360288, reward 156.88, seed 103: step 289440, reward 159.13; seed 103 was selected before the terminal checkpoint rather than automatically taking the last model.
+
+The predeclared promotion gate used only selection seeds 211--230 and required both a positive mean reward difference and improvement in every matched training replica. It passed with replica advantages seed 101: 23.69, seed 102: 37.70, seed 103: 28.45 (mean 29.95). Only then was the untouched final split 3001--3030 evaluated once.
+
+| Policy | Reward [95% CI] | Recall | Energy | Mean AoI | Redundant samples |
+|---|---:|---:|---:|---:|---:|
+| Published QMIX | 27.59 [8.99, 46.19] | 0.473 | 13.95 | 8.61 | 61.74 |
+| Improved QMIX | 119.09 [102.71, 135.48] | 0.575 | 12.69 | 5.16 | 58.27 |
+| Extended QMIX | 146.76 [129.39, 164.13] | 0.602 | 11.72 | 5.07 | 52.60 |
+| Entropy Threshold | 156.32 [139.07, 173.58] | 0.609 | 10.74 | 5.62 | 46.90 |
+
+Extended QMIX improved over Improved QMIX by 27.67 paired reward units; its two-way bootstrap 95% interval was [23.27, 32.31] and Holm-adjusted p=3.14e-14. Final reward was stable across the three training replicas (seed 101: 146.15, seed 102: 147.65, seed 103: 146.48). The stronger training result still did not beat the threshold: Extended QMIX was worse by 9.56 reward units (Holm p=1.08e-06), 0.007 recall, and 0.98 energy units, while improving mean AoI by 0.55. The final environment seeds are now consumed and frozen; they must not be used for further selection or tuning. See [the frozen final report](results/training_v2/final/REPORT.md).
+
+The final manifest records the exact 30 seeds plus SHA-256 fingerprints for 12 primary model files and six listed evaluation/source files. A later dependency-closure audit found that those six hashes omitted behavior-changing transitive files, including the energy model and PettingZoo wrapper. The frozen numbers remain internally reproducible from their raw CSVs, but the fingerprint claim is partial rather than complete. It records Git SHA `2d920fa26d1781341a1f260b7d8309fadb134d87` and the worktree-dirty disclosure.
+
+## Split-locked deployment ensemble
+
+A final bounded iteration left all trained weights, environment dynamics, and reward terms unchanged. It predeclared two scale-independent deployment rules over the three Extended QMIX replicas: majority voting and unanimous voting for SAMPLE. Selection seeds 231--250 rejected majority voting because its reward interval crossed zero. Unanimous voting passed every promotion gate, gaining 4.19 reward units with selection CI [2.58, 5.81], while also improving recall, energy, and redundancy. Only that rule was evaluated on the untouched final seeds 4001--4030.
+
+The historical promotion predicate reported but did not require the candidate-family Holm-adjusted reward p-value. The selected unanimous rule nevertheless has `p_holm = 6.20e-05` and passes the corrected future guard, so this omission does not change the frozen winner or final result.
+
+| Policy | Reward | Recall | Energy | Mean AoI | Redundant samples |
+|---|---:|---:|---:|---:|---:|
+| Extended QMIX Replica Mean | 153.38 | 0.608 | 11.78 | 5.10 | 53.84 |
+| QMIX Unanimous Ensemble | 157.43 | 0.612 | 11.55 | 5.21 | 52.70 |
+| Entropy Threshold | 159.70 | 0.611 | 10.82 | 5.64 | 48.30 |
+| Battery + Entropy | 150.45 | 0.600 | 10.62 | 5.82 | 47.13 |
+
+On the final split, unanimous voting improved over the Extended replica mean by 4.05 reward units (95% CI [2.92, 5.18], Holm p=3.93e-07). It also improved recall, energy, redundancy, and coverage, but worsened AoI by 0.11. Relative to the threshold, the remaining reward difference was -2.27 (95% CI [-4.92, 0.39], Holm p=0.182); this is neither evidence of a reward win nor an equivalence test. Recall differed by only 0.001 with an interval crossing zero. The ensemble retained a clear 0.73-unit energy disadvantage and 4.40 additional redundant samples, while its AoI was 0.42 lower.
+
+The ensemble requires three recurrent-model evaluations per decision, approximately tripling model storage and inference work relative to one QMIX replica. Its final intervals vary environment seeds but condition on this one selected three-model set, so they do not measure variability across independently retrained ensembles. It is therefore a stronger simulation/deployment policy but not automatically a better TinyML choice. The final seeds are consumed and frozen. See [the v3 final report](results/training_v3/final/REPORT.md) and [artifact audit](results/training_v3/audit.json).
+
+## Strict weight-update attempt: invalidated protocol and not promoted
+
+Refined QMIX was intended to be a `1e-4` continuation of all three Extended checkpoints to a 540k-step horizon. A later artifact-level audit found that `Optimizer.load_state_dict` restored the source checkpoint parameter-group rate after the new optimizer was constructed. Every one of the 37 Refined `opt.th` files, including all three selected checkpoints, records `3e-4`. The run therefore did **not** test the declared low-learning-rate hypothesis. A separate resume audit did correctly resolve seed 103 to its validation-selected source step 289440.
+
+| Policy | Reward | Recall | Energy | Mean AoI | Redundancy |
+|---|---:|---:|---:|---:|---:|
+| Extended QMIX | 145.29 | 0.603 | 11.77 | 5.37 | 51.83 |
+| Refined QMIX | 146.73 | 0.605 | 11.66 | 5.43 | 51.33 |
+| Entropy Threshold | 154.35 | 0.608 | 10.80 | 5.89 | 46.65 |
+
+The historical same-rate selection calculation improved by 1.44 and the environment-seed CI lower bound was 0.46. However, the two-way bootstrap lower bound was -0.74, and matched replica advantages were seed 101: +3.80, seed 102: -0.31, seed 103: +0.82. Because seed 102 regressed and the bootstrap crossed zero, the predeclared all-replica gate rejected the candidate even before the LR defect was discovered. These numbers now describe only a rejected same-rate warm-start and cannot answer the low-LR question. Locked seeds 5001--5030 were not evaluated. See [the invalidation record](results/training_v4/INVALIDATED.json); the original [selection report](results/training_v4/selection/REPORT.md) is retained as a frozen historical artifact whose low-LR sentence is superseded.
+
+## Source drift after the results were produced
+
+Two source repairs postdate every run and every evaluation in this repository, so the committed source does not bit-exactly regenerate the committed numbers. The larger repair changes SAMPLE feasibility from `battery >= sample_energy_cost` to `battery >= sample_energy_cost + sleep_energy_cost + proxy_monitor_energy_cost`, because the previous rule admitted a sample without accounting for the unavoidable same-step sleep and proxy-monitor draw. It governs the action mask for every agent in every run.
+
+The gap is measured rather than assumed. The probe replays the real environment under both rules on the same 30 held-out seeds, using the policy that saturates the battery floor and therefore bounds how far the rules can diverge.
+
+| Regime | Mean reward delta | Max abs delta | Seeds differing | Agent-steps in disagreement band |
+|---|---:|---:|---:|---:|
+| independent | +0.1833 | 1.0000 | 10/30 | 11/34560 (0.032%) |
+| coordinated | -0.0666 | 4.1980 | 7/30 | 7/34560 (0.020%) |
+
+The two rules can only disagree while the battery sits inside a band 0.017% of capacity wide. Against a headline Extended-versus-Improved effect of 27.67 reward units with a bootstrap interval of [23.27, 32.31], no reported comparison changes sign or loses significance. The results are therefore disclosed rather than invalidated.
+
+The second repair synchronises the resumed learner's target mixer and reapplies the configured learning rate after optimizer-state restore. Because these runs were launched from a disclosed dirty worktree and the manifests recorded only a base SHA and a dirty flag, the learner source used by any historical run is not recoverable. The logged TD loss shows no spike at the resume boundary where an unsynchronised target mixer would perturb targets by roughly four reward units, which is consistent with the synchronisation having been present, but that is evidence rather than proof. Manifests now record `training_source_sha256` so the ambiguity cannot recur.
+
+One consequence is load-bearing. The resume resolver accepts only manifest entries whose configuration digest matches the current gate, and the Extended manifests carry the pre-repair digest, so a corrected low-learning-rate continuation from Extended now fails by design. It needs Extended retrained under the repaired environment, or an explicitly recorded decision to warm-start across the repair; fresh seeds alone are not sufficient. See [the drift record](results/environment_drift.json) and [its measured impact](results/environment_drift_impact.json).
 
 ## 1. Research question and non-predetermined protocol
 
@@ -24,16 +99,16 @@ Expensive training was blocked until the following artifact-backed gates passed.
 | independent | `reward_component_scale` | PASS | `{"components": {"aoi": -0.0, "capture": 2.0, "miss": 0.0, "rejection": 0.0, "sample_energy": -0.1}, "max_abs_component": 2.0}` |
 | independent | `entropy_event_causality` | PASS | `{"predecision_proxy": 0.25, "sample_measurement": 0.95, "sleep_measurement": null}` |
 | independent | `tiny_environment_overfit` | PASS | `{"action_visits": [[408, 92], [89, 411]], "greedy_actions": [0, 1], "q_values": [[0.0, -0.1], [-1.5, 2.0]]}` |
-| independent | `single_agent_learning` | PASS | `{"always_sleep_return_mean": -94.42499999999949, "learned_return_mean": 36.458699999999986, "sample_fraction_mean": 0.22291666666666665, "training_action_visits": [56422, 29978]}` |
-| independent | `training_evaluation_contract_match` | PASS | `{"config_digest": "7c0bec2f79ae2307", "obs_dim": 5, "regime": "independent", "scenario": "volatile", "state_dim": 20}` |
+| independent | `single_agent_learning` | PASS | `{"always_sleep_return_mean": -94.42499999999949, "learned_return_mean": 21.664999999999974, "sample_fraction_mean": 0.27638888888888885, "training_action_visits": [56179, 30221]}` |
+| independent | `training_evaluation_contract_match` | PASS | `{"config_digest": "ae510abba91917cb", "obs_dim": 5, "regime": "independent", "scenario": "volatile", "state_dim": 20}` |
 | independent | `exploration_both_actions` | PASS | `{"action_counts": [730, 270], "epsilon": 0.5}` |
 | independent | `deterministic_reproducibility` | PASS | `{"seed": 44, "steps_compared": 12}` |
 | coordinated | `forced_action_and_controlled_reward` | PASS | `{"event_sample": 1.9, "event_sleep": -1.5, "non_event_sample": -0.101, "non_event_sleep": 0.0, "sample_executed": true}` |
 | coordinated | `reward_component_scale` | PASS | `{"components": {"aoi": -0.0, "capture": 2.0, "miss": 0.0, "rejection": 0.0, "sample_energy": -0.1}, "max_abs_component": 2.0}` |
 | coordinated | `entropy_event_causality` | PASS | `{"predecision_proxy": 0.25, "sample_measurement": 0.95, "sleep_measurement": null}` |
 | coordinated | `tiny_environment_overfit` | PASS | `{"action_visits": [[408, 92], [89, 411]], "greedy_actions": [0, 1], "q_values": [[0.0, -0.1], [-1.5, 2.0]]}` |
-| coordinated | `single_agent_learning` | PASS | `{"always_sleep_return_mean": -94.42499999999949, "learned_return_mean": 36.458699999999986, "sample_fraction_mean": 0.22291666666666665, "training_action_visits": [56422, 29978]}` |
-| coordinated | `training_evaluation_contract_match` | PASS | `{"config_digest": "c4b603208648f457", "obs_dim": 5, "regime": "coordinated", "scenario": "volatile", "state_dim": 20}` |
+| coordinated | `single_agent_learning` | PASS | `{"always_sleep_return_mean": -94.42499999999949, "learned_return_mean": 21.664999999999974, "sample_fraction_mean": 0.27638888888888885, "training_action_visits": [56179, 30221]}` |
+| coordinated | `training_evaluation_contract_match` | PASS | `{"config_digest": "6834240e8e625a6c", "obs_dim": 5, "regime": "coordinated", "scenario": "volatile", "state_dim": 20}` |
 | coordinated | `exploration_both_actions` | PASS | `{"action_counts": [730, 270], "epsilon": 0.5}` |
 | coordinated | `deterministic_reproducibility` | PASS | `{"seed": 44, "steps_compared": 12}` |
 
@@ -236,5 +311,5 @@ venv/bin/python deployment/generate_plots.py
 venv/bin/python deployment/build_final_report.py
 venv/bin/python deployment/write_provenance.py
 venv/bin/python deployment/audit_final_artifacts.py
-venv/bin/pytest -q
+venv/bin/python -m pytest -q
 ```

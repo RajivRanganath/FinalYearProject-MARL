@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "created_at_utc": "2026-08-17T12:21:38.167506+00:00",
+  "created_at_utc": "2026-08-19T21:47:05.862857+00:00",
   "scenario": "volatile",
   "regime": "coordinated",
-  "config_digest": "c4b603208648f457",
+  "config_digest": "6834240e8e625a6c",
   "all_passed": true,
   "checks": [
     {
@@ -74,12 +74,12 @@
       "name": "single_agent_learning",
       "passed": true,
       "evidence": {
-        "learned_return_mean": 36.458699999999986,
+        "learned_return_mean": 21.664999999999974,
         "always_sleep_return_mean": -94.42499999999949,
-        "sample_fraction_mean": 0.22291666666666665,
+        "sample_fraction_mean": 0.27638888888888885,
         "training_action_visits": [
-          56422,
-          29978
+          56179,
+          30221
         ]
       }
     },
@@ -91,7 +91,7 @@
         "regime": "coordinated",
         "obs_dim": 5,
         "state_dim": 20,
-        "config_digest": "c4b603208648f457"
+        "config_digest": "6834240e8e625a6c"
       }
     },
     {

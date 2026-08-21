@@ -31,16 +31,14 @@ class MARLCalibrationDataReader(CalibrationDataReader):
         np.random.seed(seed)
         
         # Generate highly realistic state distribution mimicking Module A constraints
+        # ENV_OBS_DIM is 5: energy, event_proxy, aoi, neighbor_rates, harvest_forecast
         batteries = np.random.uniform(0.1, 1.0, (n_samples, 1))
-        entropies = np.random.beta(0.5, 0.5, (n_samples, 1))  # U-shaped covering low baseline and spikes
+        event_proxies = np.random.beta(0.5, 0.5, (n_samples, 1))  # U-shaped covering low baseline and spikes
+        aoi = np.random.uniform(0.0, 1.0, (n_samples, 1))
         neighbor_rates = np.random.uniform(0.0, 1.0, (n_samples, 1))
-        agent_ids = np.random.randint(0, shared_config.NUM_AGENTS, (n_samples,))
+        harvest = np.random.uniform(0.0, 1.0, (n_samples, 1))
         
-        one_hots = np.zeros((n_samples, shared_config.NUM_AGENTS), dtype=np.float32)
-        for i, aid in enumerate(agent_ids):
-            one_hots[i, aid] = 1.0
-            
-        self.obs_matrix = np.hstack([batteries, entropies, neighbor_rates, one_hots]).astype(np.float32)
+        self.obs_matrix = np.hstack([batteries, event_proxies, aoi, neighbor_rates, harvest]).astype(np.float32)
         self.hidden_zero = np.zeros((1, shared_config.HIDDEN_DIM), dtype=np.float32)
 
     def get_next(self):
@@ -51,8 +49,8 @@ class MARLCalibrationDataReader(CalibrationDataReader):
         return {'obs': obs_sample, 'hidden_state_in': self.hidden_zero}
 
 def run_quantization_evaluation(
-    float_model_path: str = "training/policy.onnx",
-    quant_model_path: str = "hardware_eval/policy_int8.onnx",
+    float_model_path: str = "results/upgrade_models/refined/coordinated/qmix_seed101.onnx",
+    quant_model_path: str = "hardware_eval/qmix_seed101_int8.onnx",
     n_test_samples: int = 2000,
     seed: int = 99
 ) -> Dict[str, Any]:
